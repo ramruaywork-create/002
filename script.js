@@ -151,6 +151,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const qcQuickPassCb = document.getElementById('qcQuickPassCheck');
     if (qcQuickPassCb) qcQuickPassCb.checked = localStorage.getItem('qcQuickPass') === '1';
+
+    // เปิดด้วยลิงก์ ...index.html#cctv จะข้ามไปหน้ากล้องเลย (ใช้กับเครื่องเปิดทิ้งไว้เฝ้ากล้อง)
+    if (location.hash === '#cctv') switchPage('pageCctv', 'btnTabCctv');
 });
 
 // ==========================================================
