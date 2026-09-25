@@ -65,10 +65,16 @@
     saveSettings();
     if (!stream) return;
     try {
-      const track = stream.getVideoTracks()[0];
-      if (track) await track.applyConstraints(getVideoConstraints());
+      // ปิดกระแสเดิมแล้วเปิดใหม่ (การสลับความละเอียดสดๆ ทำให้ภาพเสียเป็นบล็อกเขียวในกล้อง USB บางรุ่น)
+      stream.getTracks().forEach(t => t.stop());
+      video.srcObject = null;
+      await new Promise(r => setTimeout(r, 400));
+      stream = await navigator.mediaDevices.getUserMedia({ video: getVideoConstraints(), audio: false });
+      video.srcObject = stream;
+      await video.play();
       const w = video.videoWidth || 640, h = video.videoHeight || 480;
       overlay.width = w; overlay.height = h; recordCanvas.width = w; recordCanvas.height = h;
+      $('cctvMonitor').style.aspectRatio = w + ' / ' + h;
       statusText.textContent = 'เปิดกล้องแล้ว — เปลี่ยนความละเอียดเรียบร้อย';
     } catch (err) { notify('เปลี่ยนความละเอียดไม่สำเร็จ: ' + err.message); }
   });
@@ -153,8 +159,9 @@
   function getVideoConstraints() {
     const [width, height] = resolutionSelect.value.split('x').map(Number);
     const deviceId = camSelect.value && camSelect.options.length > 1 ? { exact: camSelect.value } : undefined;
-    if (!width || !height) return deviceId ? { deviceId } : {};
-    return deviceId ? { deviceId, width: { ideal: width }, height: { ideal: height } } : { width: { ideal: width }, height: { ideal: height } };
+    const frameRate = { ideal: 30, max: 30 };   // ล็อก 30 fps กันภาพกระพริบตอนความละเอียดสูง
+    if (!width || !height) return deviceId ? { deviceId, frameRate } : { frameRate };
+    return deviceId ? { deviceId, width: { ideal: width }, height: { ideal: height }, frameRate } : { width: { ideal: width }, height: { ideal: height }, frameRate };
   }
 
   async function startCamera() {
@@ -166,6 +173,7 @@
       placeholder.style.display = 'none';
       const w = video.videoWidth || 640, h = video.videoHeight || 480;
       overlay.width = w; overlay.height = h; recordCanvas.width = w; recordCanvas.height = h;
+      $('cctvMonitor').style.aspectRatio = w + ' / ' + h;   // กรอบภาพตามสัดส่วนกล้องจริง (16:9 ไม่โดนตัด)
       await listCameras();
       btnStart.disabled = true; btnStop.disabled = false;
       statusText.textContent = 'เปิดกล้องแล้ว — กรุณาเลือกโฟลเดอร์บันทึก';
@@ -279,7 +287,7 @@
     try {
       const source = renderStream || stream;
       recordedChunks = [];
-      const opts = { mimeType: 'video/webm;codecs=vp9' };
+      const opts = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: Math.min(12e6, Math.max(2.5e6, recordCanvas.width * recordCanvas.height * 4)) };
       mediaRecorder = MediaRecorder.isTypeSupported(opts.mimeType) ? new MediaRecorder(source, opts) : new MediaRecorder(source);
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
       mediaRecorder.onstop = handleClipReady;
@@ -370,6 +378,203 @@
       }
     } catch (err) {}
   }
+
+  // ==========================================================
+  //  ดูย้อนหลัง: อ่านคลิปจากโฟลเดอร์ แสดงเป็นไทม์ไลน์ตามช่วงเวลา แล้วเล่นต่อเนื่องเหมือนกล้องวงจรปิด
+  //  เวลาเริ่มอ่านจากชื่อไฟล์ เวลาจบใช้เวลาแก้ไขไฟล์ล่าสุด
+  // ==========================================================
+  const pbDate = $('cctvPbDate'), pbFrom = $('cctvPbFrom'), pbTo = $('cctvPbTo');
+  const pbLoad = $('cctvPbLoad'), pbInfo = $('cctvPbInfo'), pbVideo = $('cctvPbVideo'), pbNow = $('cctvPbNow');
+  const tl = $('cctvTl'), tlHead = $('cctvTlHead'), tlTicks = $('cctvTlTicks'), pbList = $('cctvPbList');
+  let pbClips = [], pbIndex = -1, pbWinStart = 0, pbWinEnd = 0, pbUrl = null, pbDir = null;
+
+  const d0 = new Date();
+  pbDate.value = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}`;
+
+  const hhmmss = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+  const parseName = name => {
+    const m = /^motion_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.webm$/.exec(name);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : null;
+  };
+
+  async function getPlaybackDir() {
+    if (!supportsFS) { notify('เบราว์เซอร์นี้ไม่รองรับการอ่านโฟลเดอร์ (ใช้ Chrome หรือ Edge ผ่าน http://localhost)'); return null; }
+    let h = dirHandle || pbDir || savedHandle;
+    if (!h) { try { h = await idbGet(HANDLE_KEY); } catch (e) {} }
+    if (h) {
+      try { if ((await h.requestPermission({ mode: 'read' })) === 'granted') { pbDir = h; return h; } } catch (e) {}
+    }
+    try { pbDir = await window.showDirectoryPicker({ mode: 'read' }); return pbDir; }
+    catch (e) { if (e && e.name !== 'AbortError') notify('เลือกโฟลเดอร์ไม่สำเร็จ: ' + e.message); return null; }
+  }
+
+  function windowRange() {
+    const [y, mo, da] = pbDate.value.split('-').map(Number);
+    const [fh, fm] = (pbFrom.value || '00:00').split(':').map(Number);
+    const [th, tm] = (pbTo.value || '23:59').split(':').map(Number);
+    return [new Date(y, mo - 1, da, fh, fm, 0).getTime(), new Date(y, mo - 1, da, th, tm, 59).getTime()];
+  }
+
+  async function loadPlayback() {
+    if (!pbDate.value) { notify('กรุณาเลือกวันที่'); return; }
+    const dir = await getPlaybackDir();
+    if (!dir) return;
+    [pbWinStart, pbWinEnd] = windowRange();
+    if (pbWinEnd <= pbWinStart) { notify('เวลา "ถึง" ต้องมากกว่า "ตั้งแต่"'); return; }
+    pbInfo.textContent = 'กำลังอ่านโฟลเดอร์...';
+    const clips = [];
+    try {
+      for await (const [name, handle] of dir.entries()) {
+        if (handle.kind !== 'file') continue;
+        const start = parseName(name);
+        if (start === null) continue;
+        const file = await handle.getFile();
+        const end = Math.max(file.lastModified, start + 1000);
+        if (end < pbWinStart || start > pbWinEnd) continue;
+        clips.push({ name, handle, start, end, size: file.size });
+      }
+    } catch (e) { pbInfo.textContent = 'อ่านโฟลเดอร์ไม่สำเร็จ: ' + e.message; return; }
+    clips.sort((a, b) => a.start - b.start);
+    pbClips = clips; pbIndex = -1;
+    pbInfo.textContent = clips.length ? `พบ ${clips.length} คลิป · คลิกที่ไทม์ไลน์หรือรายการเพื่อดู` : 'ไม่พบคลิปในช่วงเวลานี้';
+    renderTimeline();
+    if (clips.length) playClip(0);
+  }
+
+  function renderTimeline() {
+    tl.querySelectorAll('.cctv-tl-seg').forEach(n => n.remove());
+    const span = pbWinEnd - pbWinStart;
+    pbClips.forEach((c, i) => {
+      const seg = document.createElement('div');
+      seg.className = 'cctv-tl-seg';
+      const l = Math.max(0, (c.start - pbWinStart) / span) * 100;
+      const r = Math.min(1, (c.end - pbWinStart) / span) * 100;
+      seg.style.left = l + '%'; seg.style.width = Math.max(0.25, r - l) + '%';
+      seg.title = `${hhmmss(c.start)} - ${hhmmss(c.end)}`;
+      seg.dataset.i = i;
+      tl.appendChild(seg);
+    });
+    // ขีดบอกเวลาบนแกน (ประมาณ 8 ช่อง)
+    tlTicks.innerHTML = '';
+    const steps = 8;
+    for (let i = 0; i <= steps; i++) {
+      const t = document.createElement('span');
+      t.style.left = (i / steps * 100) + '%';
+      t.textContent = hhmmss(pbWinStart + span * i / steps).slice(0, 5);
+      tlTicks.appendChild(t);
+    }
+    pbList.innerHTML = '';
+    pbClips.forEach((c, i) => {
+      const li = document.createElement('li');
+      li.dataset.i = i; li.style.cursor = 'pointer';
+      const a = document.createElement('span'); a.textContent = `${hhmmss(c.start)} – ${hhmmss(c.end)}`;
+      const b = document.createElement('span'); b.className = 'cctv-badge'; b.textContent = `${(c.size / 1024 / 1024).toFixed(2)} MB `;
+      const dl = document.createElement('button'); dl.type = 'button'; dl.className = 'cctv-mini'; dl.dataset.dl = i; dl.textContent = '⬇'; dl.title = 'ดาวน์โหลดคลิปนี้';
+      b.appendChild(dl);
+      li.appendChild(a); li.appendChild(b); pbList.appendChild(li);
+    });
+    $('cctvPbDownload').disabled = !pbClips.length;
+    $('cctvPbDownloadAll').disabled = !pbClips.length;
+    updateHead(pbWinStart);
+  }
+
+  function updateHead(ms) {
+    const span = pbWinEnd - pbWinStart;
+    if (!span) return;
+    const p = (ms - pbWinStart) / span;
+    tlHead.hidden = p < 0 || p > 1;
+    tlHead.style.left = (p * 100) + '%';
+  }
+
+  async function playClip(i, offsetMs) {
+    if (i < 0 || i >= pbClips.length) return;
+    pbIndex = i;
+    const c = pbClips[i];
+    try {
+      const file = await c.handle.getFile();
+      if (pbUrl) URL.revokeObjectURL(pbUrl);
+      pbUrl = URL.createObjectURL(file);
+      pbVideo.src = pbUrl;
+      pbVideo.onloadedmetadata = () => { if (offsetMs > 0) { try { pbVideo.currentTime = offsetMs / 1000; } catch (e) {} } };
+      await pbVideo.play().catch(() => {});
+    } catch (e) { pbInfo.textContent = 'เปิดคลิปไม่สำเร็จ: ' + e.message; }
+    tl.querySelectorAll('.cctv-tl-seg').forEach(s => s.classList.toggle('active', +s.dataset.i === i));
+    pbList.querySelectorAll('li').forEach(li => li.classList.toggle('active', +li.dataset.i === i));
+    pbNow.textContent = hhmmss(c.start);
+    updateHead(c.start);
+    $('cctvPbPrev').disabled = i <= 0;
+    $('cctvPbNext').disabled = i >= pbClips.length - 1;
+  }
+
+  pbVideo.addEventListener('timeupdate', () => {
+    if (pbIndex < 0) return;
+    const ms = pbClips[pbIndex].start + pbVideo.currentTime * 1000;
+    pbNow.textContent = hhmmss(ms);
+    updateHead(ms);
+  });
+  pbVideo.addEventListener('ended', () => { if (pbIndex + 1 < pbClips.length) playClip(pbIndex + 1); });
+
+  tl.addEventListener('click', e => {
+    if (!pbClips.length) return;
+    const r = tl.getBoundingClientRect();
+    const t = pbWinStart + (e.clientX - r.left) / r.width * (pbWinEnd - pbWinStart);
+    let i = pbClips.findIndex(c => t >= c.start && t <= c.end);
+    if (i >= 0) return playClip(i, t - pbClips[i].start);
+    i = pbClips.findIndex(c => c.start > t);      // คลิกช่วงว่าง → ไปคลิปถัดไป
+    playClip(i >= 0 ? i : pbClips.length - 1);
+  });
+  async function downloadClip(i) {
+    const c = pbClips[i];
+    if (!c) return;
+    try { downloadBlob(await c.handle.getFile(), c.name); }
+    catch (e) { notify('ดาวน์โหลดไม่สำเร็จ: ' + e.message); }
+  }
+  pbList.addEventListener('click', e => {
+    const dl = e.target.closest('button[data-dl]');
+    if (dl) { downloadClip(+dl.dataset.dl); return; }
+    const li = e.target.closest('li[data-i]'); if (li) playClip(+li.dataset.i);
+  });
+  $('cctvPbDownload').addEventListener('click', () => downloadClip(pbIndex));
+  $('cctvPbDownloadAll').addEventListener('click', async () => {
+    if (!pbClips.length) return;
+    if (!confirm(`ดาวน์โหลดทั้งหมด ${pbClips.length} คลิป? เบราว์เซอร์อาจถามขออนุญาตดาวน์โหลดหลายไฟล์`)) return;
+    for (let i = 0; i < pbClips.length; i++) { await downloadClip(i); await new Promise(r => setTimeout(r, 500)); }
+  });
+  pbLoad.addEventListener('click', loadPlayback);
+
+  // สลับแท็บ กล้องสด / ดูย้อนหลัง (กล้องสดยังอัดต่อเนื่องแม้ซ่อนอยู่)
+  const tabLive = $('cctvTabLive'), tabPb = $('cctvTabPb'), liveView = $('cctvLiveView'), pbView = $('cctvPbView');
+  let pbAutoLoaded = false;
+  function showTab(name) {
+    const pb = name === 'pb';
+    liveView.hidden = pb; pbView.hidden = !pb;
+    tabLive.classList.toggle('active', !pb); tabPb.classList.toggle('active', pb);
+    if (!pb) pbVideo.pause();
+    // โหลดให้อัตโนมัติเฉพาะตอนที่เชื่อมต่อโฟลเดอร์ไว้แล้ว (ไม่งั้นต้องให้ผู้ใช้กดค้นหาเอง เพราะเบราว์เซอร์ต้องการการคลิกก่อนเปิดตัวเลือกโฟลเดอร์)
+    if (pb && !pbAutoLoaded && (dirHandle || pbDir)) { pbAutoLoaded = true; loadPlayback(); }
+  }
+  tabLive.addEventListener('click', () => showTab('live'));
+  tabPb.addEventListener('click', () => showTab('pb'));
+
+  // ปุ่มลัดช่วงเวลา
+  document.querySelectorAll('[data-quick]').forEach(btn => btn.addEventListener('click', () => {
+    const now = new Date(), q = btn.dataset.quick;
+    const dstr = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const tstr = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    if (q === 'hour') {
+      const from = new Date(now.getTime() - 3600 * 1000);
+      if (dstr(from) !== dstr(now)) { pbDate.value = dstr(now); pbFrom.value = '00:00'; }
+      else { pbDate.value = dstr(now); pbFrom.value = tstr(from); }
+      pbTo.value = tstr(now);
+    } else {
+      const d = new Date(now); if (q === 'yesterday') d.setDate(d.getDate() - 1);
+      pbDate.value = dstr(d); pbFrom.value = '00:00'; pbTo.value = '23:59';
+    }
+    loadPlayback();
+  }));
+
+  $('cctvPbPrev').addEventListener('click', () => playClip(pbIndex - 1));
+  $('cctvPbNext').addEventListener('click', () => playClip(pbIndex + 1));
 
   window.cctvOnPageShow = function () {
     if (started) return;

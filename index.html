@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=14">
+    <link rel="stylesheet" href="css/style.css?v=20">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -44,6 +44,7 @@
             </div>
         </div>
 
+        <div class="nav-group-title">งานตรวจสินค้า</div>
         <button id="btnTabScan" class="tab-btn active" onclick="switchPage('pageScan', 'btnTabScan')">
             <span>🔍 ตรวจสอบสินค้า (QC Scan)</span>
         </button>
@@ -52,6 +53,11 @@
             <span>📋 รายการออเดอร์ (Orders)</span>
         </button>
 
+        <button id="btnTabUpload" class="tab-btn" onclick="switchPage('pageUploadExcel', 'btnTabUpload')">
+            <span>📤 ทำ ฟวย (Upload Excel)</span>
+        </button>
+
+        <div class="nav-group-title">จัดการข้อมูล</div>
         <button id="btnTabProducts" class="tab-btn" onclick="switchPage('pageProducts', 'btnTabProducts')">
             <span>📦 จัดการสินค้า (Products)</span>
         </button>
@@ -71,10 +77,7 @@
             </div>
         </div>
 
-        <button id="btnTabUpload" class="tab-btn" onclick="switchPage('pageUploadExcel', 'btnTabUpload')">
-            <span>📤 ทำ ฟวย (Upload Excel)</span>
-        </button>
-
+        <div class="nav-group-title">ประวัติ &amp; กล้อง</div>
         <button id="btnTabScanLog" class="tab-btn" onclick="switchPage('pageScanLog', 'btnTabScanLog')">
             <span>🧾 ประวัติการยิงสแกนเนอร์</span>
         </button>
@@ -82,7 +85,6 @@
         <button id="btnTabCctv" class="tab-btn" onclick="switchPage('pageCctv', 'btnTabCctv')">
             <span>📹 กล้อง CCTV</span>
         </button>
-
         <div class="sidebar-volume">
             <label for="qcVolumeSlider" class="sidebar-volume-label">🔊 ระดับเสียงแจ้งเตือน QC</label>
             <div class="sidebar-volume-row">
@@ -351,6 +353,12 @@
                         ไฟล์จะยังบันทึกได้ด้วยการดาวน์โหลดอัตโนมัติ แต่จะเลือกโฟลเดอร์ปลายทางเองไม่ได้
                     </div>
 
+                    <div class="cctv-tabs">
+                        <button type="button" class="active" id="cctvTabLive">🔴 กล้องสด</button>
+                        <button type="button" id="cctvTabPb">⏪ ดูย้อนหลัง</button>
+                    </div>
+
+                    <div id="cctvLiveView">
                     <div class="cctv-workspace">
                         <div class="cctv-monitor" id="cctvMonitor">
                             <video id="cctvVideo" autoplay muted playsinline style="display:none;"></video>
@@ -392,11 +400,12 @@
                                 <div class="cctv-row">
                                     <div><label for="cctvResolution">ความละเอียด</label><span class="cctv-hint">กล้องบางรุ่นอาจไม่รองรับทุกขนาด</span></div>
                                     <select id="cctvResolution">
-                                        <option value="auto">อัตโนมัติ</option>
+                                        <option value="auto">อัตโนมัติ (ไม่แนะนำ)</option>
                                         <option value="320x240">320 x 240</option>
                                         <option value="640x480" selected>640 x 480</option>
                                         <option value="1280x720">1280 x 720 HD</option>
                                         <option value="1920x1080">1920 x 1080 Full HD</option>
+                                        <option value="2560x1440">2560 x 1440 2K</option>
                                     </select>
                                 </div>
 
@@ -411,6 +420,41 @@
                                 <ul class="cctv-log" id="cctvLog"><li class="cctv-log-empty">ยังไม่มีคลิปที่บันทึก</li></ul>
                             </div>
                         </div>
+                    </div>
+                    </div>
+
+                    <div id="cctvPbView" hidden>
+                    <div class="cctv-card cctv-playback" id="cctvPlayback">
+                        <div class="cctv-quick">
+                            <span>เลือกช่วงเวลา:</span>
+                            <button type="button" data-quick="hour">1 ชม.ล่าสุด</button>
+                            <button type="button" data-quick="today">วันนี้</button>
+                            <button type="button" data-quick="yesterday">เมื่อวาน</button>
+                        </div>
+                        <div class="cctv-pb-controls">
+                            <label>วันที่ <input type="date" id="cctvPbDate"></label>
+                            <label>ตั้งแต่ <input type="time" id="cctvPbFrom" value="00:00"></label>
+                            <label>ถึง <input type="time" id="cctvPbTo" value="23:59"></label>
+                            <button type="button" class="cctv-primary" id="cctvPbLoad">🔍 ค้นหาคลิป</button>
+                            <span class="cctv-hint" id="cctvPbInfo">เลือกวันและช่วงเวลา แล้วกด "ค้นหาคลิป"</span>
+                        </div>
+                        <div class="cctv-pb-player">
+                            <video id="cctvPbVideo" controls playsinline></video>
+                            <div class="cctv-pb-now" id="cctvPbNow">--:--:--</div>
+                        </div>
+                        <div class="cctv-pb-actions">
+                            <button type="button" id="cctvPbPrev" disabled>⏮ คลิปก่อนหน้า</button>
+                            <button type="button" id="cctvPbNext" disabled>คลิปถัดไป ⏭</button>
+                            <span class="cctv-spacer"></span>
+                            <button type="button" id="cctvPbDownload" disabled>⬇ ดาวน์โหลดคลิปนี้</button>
+                            <button type="button" id="cctvPbDownloadAll" disabled>⬇ ดาวน์โหลดทั้งช่วง</button>
+                        </div>
+                        <div class="cctv-tl-wrap">
+                            <div class="cctv-tl" id="cctvTl"><div class="cctv-tl-head" id="cctvTlHead" hidden></div></div>
+                            <div class="cctv-tl-ticks" id="cctvTlTicks"></div>
+                        </div>
+                        <ul class="cctv-log cctv-pb-list" id="cctvPbList"></ul>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -512,7 +556,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-api.js?v=8"></script>
 <script src="js/script.js?v=42"></script>
-<script src="js/cctv.js?v=1"></script>
+<script src="js/cctv.js?v=7"></script>
 <script src="js/scanlog.js?v=4"></script>
 
 </body>

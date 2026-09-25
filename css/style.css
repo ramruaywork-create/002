@@ -71,6 +71,8 @@ body { margin: 0; padding: 0; background-color: var(--argon-bg); color: var(--ar
     box-shadow: none;
 }
 .dropdown-container { display: flex; flex-direction: column; }
+.nav-group-title { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #8898aa; padding: 16px 14px 6px 15px; }
+.nav-group-title:first-of-type { padding-top: 6px; }
 .sub-menu {
     display: none;
     flex-direction: column;
@@ -1332,58 +1334,95 @@ input[type="file"]::-webkit-file-upload-button {
 }
 
 /* ==========================================================
-   กล้อง CCTV (บันทึกอัตโนมัติเมื่อจับความเคลื่อนไหว) — ธีมมืดแยกในกรอบของตัวเอง
+   กล้อง CCTV (บันทึกอัตโนมัติเมื่อจับความเคลื่อนไหว) — ธีมสว่างเข้ากับหน้าอื่นของแอป (Argon)
    ทุก class ขึ้นต้นด้วย cctv- เพื่อไม่ชนกับสไตล์ของแอป
    ========================================================== */
 .cctv-title-sub { font-size: 12px; font-weight: 500; color: #8898aa; margin-left: 8px; }
 .cctv-root {
-    --cctv-bg: #0c1013; --cctv-panel: #151b20; --cctv-panel-2: #1b232a; --cctv-line: #2a343c;
-    --cctv-text: #d9e2e6; --cctv-dim: #7c8a92; --cctv-green: #3ddc97; --cctv-green-dim: #23553f;
-    --cctv-alert: #ff4d4d;
-    background: var(--cctv-bg); color: var(--cctv-text); border-radius: 14px; padding: 18px;
+    --cctv-panel: #fff; --cctv-panel-2: #f6f9fc; --cctv-line: #e9ecef;
+    --cctv-text: var(--argon-dark); --cctv-dim: #8898aa; --cctv-green: #2dce89; --cctv-green-dim: #a8e8cd;
+    --cctv-alert: #f5365c; --cctv-osd: #3ddc97;
+    color: var(--argon-body);
 }
-.cctv-notice { background: var(--cctv-panel-2); border: 1px solid var(--cctv-line); border-left: 3px solid var(--cctv-green); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--cctv-dim); margin-bottom: 16px; line-height: 1.6; }
-.cctv-notice strong { color: var(--cctv-text); }
-.cctv-notice code { background: var(--cctv-panel); border: 1px solid var(--cctv-line); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: var(--cctv-green); }
+.cctv-notice { background: #fff8e6; border: 1px solid #ffe2a3; border-left: 3px solid #fb6340; border-radius: var(--argon-radius-sm); padding: 10px 14px; font-size: 13px; color: #6b5b2e; margin-bottom: 16px; line-height: 1.6; }
+.cctv-notice code { background: #fff; border: 1px solid var(--cctv-line); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: var(--argon-primary); }
+
+/* แท็บ กล้องสด / ดูย้อนหลัง */
+.cctv-tabs { display: inline-flex; gap: 4px; background: var(--cctv-panel-2); border: 1px solid var(--cctv-line); border-radius: 50px; padding: 4px; margin-bottom: 16px; }
+.cctv-root .cctv-tabs button { border: none; background: transparent; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 600; color: var(--cctv-dim); cursor: pointer; }
+.cctv-root .cctv-tabs button:focus { outline: none; }
+.cctv-root .cctv-tabs button.active { background: var(--argon-primary-grad); color: #fff; box-shadow: 0 3px 8px rgba(94, 114, 228, .35); }
+
 .cctv-workspace { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start; }
 .cctv-panels { display: grid; grid-template-columns: 1fr; gap: 16px; }
-@media (max-width: 900px) { .cctv-workspace { grid-template-columns: 1fr; } }
-.cctv-monitor { position: relative; background: #000; border-radius: 10px; border: 1px solid var(--cctv-line); box-shadow: 0 0 0 6px #05070a; overflow: hidden; aspect-ratio: 4/3; }
+@media (max-width: 1150px) { .cctv-workspace { grid-template-columns: 1fr; } }
+.cctv-monitor { position: relative; width: 100%; max-height: 70vh; background: #000; border-radius: var(--argon-radius); overflow: hidden; aspect-ratio: 16/9; box-shadow: 0 4px 12px rgba(50, 50, 93, .15); }
 .cctv-monitor video, .cctv-monitor canvas.cctv-overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cctv-monitor canvas.cctv-overlay { pointer-events: none; }
-.cctv-scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.10) 3px); mix-blend-mode: multiply; opacity: .5; }
-.cctv-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 30px rgba(0,0,0,0.55); }
-.cctv-hud { position: absolute; left: 12px; top: 10px; font-family: Consolas, monospace; font-size: 12px; color: var(--cctv-green); display: flex; gap: 10px; align-items: center; }
+.cctv-scan, .cctv-vignette { display: none; }
+.cctv-hud { position: absolute; left: 12px; top: 10px; font-family: Consolas, monospace; font-size: 12px; color: var(--cctv-osd); display: flex; gap: 10px; align-items: center; text-shadow: 0 0 4px #000; }
 .cctv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cctv-green-dim); }
-.cctv-hud.recording { color: var(--cctv-alert); }
-.cctv-hud.recording .cctv-dot { background: var(--cctv-alert); animation: cctv-pulse 1s infinite; }
+.cctv-hud.recording { color: #ff6b6b; }
+.cctv-hud.recording .cctv-dot { background: #ff4d4d; animation: cctv-pulse 1s infinite; }
 @keyframes cctv-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,77,77,.7); } 50% { box-shadow: 0 0 0 5px rgba(255,77,77,0); } }
-.cctv-timestamp { position: absolute; right: 12px; bottom: 10px; font-family: Consolas, monospace; font-size: 12px; color: var(--cctv-green); }
-.cctv-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--cctv-dim); font-size: 14px; text-align: center; padding: 0 30px; }
-.cctv-card { background: var(--cctv-panel); border: 1px solid var(--cctv-line); border-radius: 10px; padding: 16px 18px; }
-.cctv-card h3 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--cctv-dim); }
-.cctv-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.cctv-row label { font-size: 14px; }
-.cctv-hint { font-size: 12px; color: var(--cctv-dim); display: block; margin-top: 2px; }
-.cctv-root input[type=range] { width: 140px; accent-color: var(--cctv-green); }
-.cctv-root select { background: var(--cctv-panel-2); color: var(--cctv-text); border: 1px solid var(--cctv-line); border-radius: 6px; padding: 6px 8px; font-size: 13px; max-width: 180px; }
-.cctv-root button { font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px; padding: 10px 16px; border: 1px solid var(--cctv-line); background: var(--cctv-panel-2); color: var(--cctv-text); }
-.cctv-root button:hover { border-color: var(--cctv-green); }
-.cctv-root button:disabled { opacity: .4; cursor: not-allowed; }
-.cctv-root button.cctv-primary { background: var(--cctv-green); color: #06140e; border-color: var(--cctv-green); }
-.cctv-root button.cctv-danger { background: var(--cctv-alert); color: #240a0a; border-color: var(--cctv-alert); }
-.cctv-btnrow { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-.cctv-status-line { font-size: 13px; color: var(--cctv-dim); margin-top: 12px; line-height: 1.6; }
-.cctv-status-line strong { color: var(--cctv-text); }
-.cctv-folder-path { font-family: Consolas, monospace; font-size: 12px; color: var(--cctv-green); word-break: break-all; }
-.cctv-log { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; font-family: Consolas, monospace; font-size: 12.5px; }
-.cctv-log li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--cctv-line); color: var(--cctv-dim); }
+.cctv-timestamp { position: absolute; right: 12px; bottom: 10px; font-family: Consolas, monospace; font-size: 12px; color: var(--cctv-osd); text-shadow: 0 0 4px #000; }
+.cctv-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #9aa5b1; font-size: 14px; text-align: center; padding: 0 30px; }
+
+.cctv-card { background: var(--cctv-panel); border: 1px solid var(--argon-border); border-radius: var(--argon-radius); padding: 16px 18px; box-shadow: var(--argon-soft-shadow); }
+.cctv-card h3 { font-size: 14px; font-weight: 700; margin: 0 0 12px; color: var(--argon-dark); }
+.cctv-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--cctv-line); }
+.cctv-row > div { flex: 1 1 auto; min-width: 0; }
+.cctv-row > select, .cctv-row > input[type=range] { flex: 0 0 170px; width: 170px; max-width: 170px; }
+.cctv-row label { font-size: 14px; font-weight: 600; color: var(--argon-dark); }
+.cctv-hint { font-size: 12px; color: var(--cctv-dim); display: block; margin-top: 2px; font-weight: 400; }
+.cctv-root input[type=range] { width: 140px; accent-color: var(--argon-primary); }
+.cctv-root select, .cctv-root input[type=date], .cctv-root input[type=time] { background: #fff; color: var(--argon-body); border: 1px solid #cad1d7; border-radius: var(--argon-radius-sm); padding: 7px 10px; font-size: 13px; max-width: 200px; }
+.cctv-root button { font-size: 14px; font-weight: 600; cursor: pointer; border-radius: var(--argon-radius-sm); padding: 9px 16px; border: 1px solid #cad1d7; background: #fff; color: var(--argon-body); }
+.cctv-root button:hover { border-color: var(--argon-primary); color: var(--argon-primary); }
+.cctv-root button:disabled { opacity: .45; cursor: not-allowed; }
+.cctv-root button:disabled:hover { border-color: #cad1d7; color: var(--argon-body); }
+.cctv-root button.cctv-primary { background: var(--argon-primary-grad); color: #fff; border: none; }
+.cctv-root button.cctv-primary:hover { color: #fff; opacity: .92; }
+.cctv-root button.cctv-danger { background: var(--argon-danger-grad); color: #fff; border: none; }
+.cctv-root button.cctv-danger:hover { color: #fff; opacity: .92; }
+.cctv-root button.cctv-danger:disabled:hover { color: #fff; }
+.cctv-btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.cctv-btnrow button { flex: 1 1 130px; white-space: nowrap; padding: 10px 12px; }
+.cctv-status-line { font-size: 13px; color: var(--cctv-dim); margin-top: 12px; line-height: 1.6; padding-top: 10px; border-top: 1px dashed var(--cctv-line); }
+.cctv-status-line strong { color: var(--argon-dark); }
+.cctv-folder-path { font-family: Consolas, monospace; font-size: 12px; color: var(--argon-primary); word-break: break-all; }
+.cctv-log { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; font-size: 13px; }
+.cctv-log li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--cctv-line); color: var(--argon-body); }
 .cctv-log li:last-child { border-bottom: none; }
-.cctv-log li.saved .cctv-badge { color: var(--cctv-green); }
+.cctv-log li.saved .cctv-badge { color: #1a8f5c; }
 .cctv-log li.failed .cctv-badge { color: var(--cctv-alert); }
 .cctv-log-empty { color: var(--cctv-dim); font-size: 13px; }
-
 .cctv-root [hidden] { display: none !important; }
+
+/* ดูย้อนหลัง */
+.cctv-quick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 13px; color: var(--cctv-dim); }
+.cctv-root .cctv-quick button { border-radius: 50px; padding: 6px 14px; font-size: 13px; }
+.cctv-pb-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 14px; color: var(--argon-body); font-size: 13px; }
+.cctv-pb-controls .cctv-hint { margin-top: 0; }
+.cctv-pb-player { position: relative; background: #000; border-radius: var(--argon-radius); overflow: hidden; }
+.cctv-pb-player video { width: 100%; max-height: 460px; display: block; background: #000; }
+.cctv-pb-now { position: absolute; top: 10px; left: 12px; font-family: Consolas, monospace; font-size: 13px; color: var(--cctv-osd); text-shadow: 0 0 4px #000; pointer-events: none; }
+.cctv-pb-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.cctv-spacer { flex: 1; }
+.cctv-tl-wrap { margin-top: 14px; }
+.cctv-tl { position: relative; height: 34px; background: var(--cctv-panel-2); border: 1px solid #cad1d7; border-radius: var(--argon-radius-sm); cursor: pointer; overflow: hidden; }
+.cctv-tl-seg { position: absolute; top: 4px; bottom: 4px; background: #7d8ff0; border-radius: 3px; }
+.cctv-tl-seg:hover { background: var(--argon-primary); }
+.cctv-tl-seg.active { background: #fb6340; }
+.cctv-tl-head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cctv-alert); pointer-events: none; }
+.cctv-tl-ticks { position: relative; height: 18px; margin: 4px 0 8px; font-family: Consolas, monospace; font-size: 11px; color: var(--cctv-dim); }
+.cctv-tl-ticks span { position: absolute; transform: translateX(-50%); }
+.cctv-tl-ticks span:first-child { transform: none; }
+.cctv-tl-ticks span:last-child { transform: translateX(-100%); }
+.cctv-pb-list li { cursor: pointer; border-radius: 6px; padding: 7px 8px; }
+.cctv-pb-list li:hover { background: var(--cctv-panel-2); }
+.cctv-pb-list li.active { background: #eef1fd; color: var(--argon-primary); font-weight: 600; }
+.cctv-root button.cctv-mini { padding: 1px 8px; font-size: 12px; margin-left: 8px; border-radius: 6px; }
 
 /* สรุปตัวเลขหน้า "ประวัติการยิงสแกนเนอร์" */
 .scanlog-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
