@@ -112,6 +112,13 @@
     pageUploadExcel: 'ทำ ฟวย', pageScanLog: 'ประวัติการยิง', pageCctv: 'กล้อง CCTV'
   };
 
+  // page เป็น id หน้าในเว็บ หรือ "app:ชื่อโปรแกรม" ถ้ายิงตอนอยู่โปรแกรมอื่น (จากโปรแกรมเบื้องหลัง)
+  function pageLabel(page) {
+    if (!page) return '-';
+    if (page.startsWith('app:')) return 'โปรแกรมอื่น (' + page.slice(4) + ')';
+    return PAGE_LABEL[page] || page;
+  }
+
   function todayBangkok() {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   }
@@ -131,7 +138,8 @@
     }
 
     const result = await apiGet('getScanLog', params);
-    const rows = result.rows || [];
+    // ประเภทประเมินใหม่จากข้อมูลออเดอร์ล่าสุดทุกครั้ง (โปรแกรมเบื้องหลังไม่รู้จักออเดอร์ จึงบันทึกเป็น "scanned")
+    const rows = (result.rows || []).map(r => ({ ...r, kind: detectKind(r.code) }));
     const count = k => rows.filter(r => r.kind === k).length;
     const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     setText('scanLogTotal', rows.length);
@@ -152,7 +160,7 @@
         <td class="text-center" style="font-size:12px; color:#666;">${escapeHtml(r.time)}</td>
         <td><b>${escapeHtml(r.code)}</b></td>
         <td class="text-center">${KIND_LABEL[r.kind] || KIND_LABEL.unknown}</td>
-        <td>${escapeHtml(PAGE_LABEL[r.page] || r.page || '-')}</td>
+        <td>${escapeHtml(pageLabel(r.page))}</td>
       </tr>`).join('');
   };
 })();
