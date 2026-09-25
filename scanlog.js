@@ -9,6 +9,7 @@
   const MAX_AVG_GAP_MS = 50;  // เครื่องสแกนเฉลี่ยเร็วกว่านี้มาก (ปกติ ~5-20ms)
   const IDLE_FLUSH_MS = 120;  // เครื่องสแกนที่ไม่ส่ง Enter ปิดท้าย ให้ถือว่าจบเมื่อเงียบไปเท่านี้
   const PENDING_KEY = 'scanLogPending';
+  const ALLOWED_PREFIX = /^(th|spx)/i;
 
   let buf = '';
   let times = [];
@@ -67,6 +68,7 @@
     buf = '';
     times = [];
     if (code.length < MIN_LEN || stamps.length < 2) return;
+    if (!ALLOWED_PREFIX.test(code)) return; // เก็บเฉพาะเลขที่ขึ้นต้นด้วย TH หรือ SPX (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
     const avgGap = (stamps[stamps.length - 1] - stamps[0]) / (stamps.length - 1);
     if (avgGap > MAX_AVG_GAP_MS) return;
 
