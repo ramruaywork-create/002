@@ -884,6 +884,7 @@ function switchPage(pageId, btnId, isSubMenu = false) {
     renderTables();
     closeMobileMenu();
     if (pageId === 'pageCctv' && typeof cctvOnPageShow === 'function') cctvOnPageShow();
+    if (pageId === 'pageScanLog' && typeof loadScanLog === 'function') loadScanLog();
 }
 
 function toggleMobileMenu() {

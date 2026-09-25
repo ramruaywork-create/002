@@ -1384,3 +1384,8 @@ input[type="file"]::-webkit-file-upload-button {
 .cctv-log-empty { color: var(--cctv-dim); font-size: 13px; }
 
 .cctv-root [hidden] { display: none !important; }
+
+/* สรุปตัวเลขหน้า "ประวัติการยิงสแกนเนอร์" */
+.scanlog-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.scanlog-chip { padding: 8px 14px; border: 1px solid var(--argon-border); border-radius: 50px; background: #fff; font-size: 13px; color: var(--argon-gray); }
+.scanlog-chip b { color: var(--argon-dark); margin-left: 4px; }

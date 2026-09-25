@@ -694,10 +694,44 @@ async function sbAddCheckedTracking(trackingNo) {
 // ==========================================================
 //  จุดเรียกรวม เทียบเท่า doGet/doPost ของ Apps Script เดิม
 // ==========================================================
-async function sbApiGet(action) {
+// ==========================================================
+//  ประวัติการยิงสแกนเนอร์ (scan_log)
+// ==========================================================
+async function sbLogScans(rows) {
+    try {
+        if (!rows || !rows.length) return { success: true, added: 0 };
+        const { error } = await sbClient.from('scan_log').insert(rows);
+        if (error) throw error;
+        return { success: true, added: rows.length };
+    } catch (err) {
+        return { success: false, message: err.message || String(err) };
+    }
+}
+
+// params: { fromISO, toISO, q, limit }
+async function sbGetScanLog(params) {
+    try {
+        const p = params || {};
+        let query = sbClient.from('scan_log').select('id, code, kind, page, input_id, created_at').order('created_at', { ascending: false });
+        if (p.fromISO) query = query.gte('created_at', p.fromISO);
+        if (p.toISO) query = query.lt('created_at', p.toISO);
+        if (p.q) query = query.ilike('code', '%' + String(p.q).replace(/[%_]/g, '') + '%');
+        const { data, error } = await query.limit(p.limit || 500);
+        if (error) throw error;
+        return {
+            success: true,
+            rows: (data || []).map(r => ({ id: r.id, code: r.code, kind: r.kind, page: r.page, inputId: r.input_id, time: sbFormatBangkok(r.created_at) }))
+        };
+    } catch (err) {
+        return { success: false, message: err.message || String(err), rows: [] };
+    }
+}
+
+async function sbApiGet(action, params) {
     switch (action) {
         case 'getAllData': return await sbGetAllData();
         case 'getFuayData': return await sbGetFuayData();
+        case 'getScanLog': return await sbGetScanLog(params);
         default: return { success: false, message: 'ไม่รู้จัก action: ' + action };
     }
 }
@@ -718,6 +752,7 @@ async function sbApiPost(action, payload) {
         case 'importExcelToOrdersSheet': return await sbImportExcelToOrdersSheet(payload);
         case 'cleanupOrphanStatusRows': return await sbCleanupOrphanStatusRows();
         case 'addCheckedTracking': return await sbAddCheckedTracking(payload.trackingNo);
+        case 'logScans': return await sbLogScans(payload.rows);
         default: return { success: false, message: 'ไม่รู้จัก action: ' + action };
     }
 }

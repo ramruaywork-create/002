@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -73,6 +73,10 @@
 
         <button id="btnTabUpload" class="tab-btn" onclick="switchPage('pageUploadExcel', 'btnTabUpload')">
             <span>📤 ทำ ฟวย (Upload Excel)</span>
+        </button>
+
+        <button id="btnTabScanLog" class="tab-btn" onclick="switchPage('pageScanLog', 'btnTabScanLog')">
+            <span>🧾 ประวัติการยิงสแกนเนอร์</span>
         </button>
 
         <button id="btnTabCctv" class="tab-btn" onclick="switchPage('pageCctv', 'btnTabCctv')">
@@ -309,6 +313,35 @@
                 <div class="pagination-container" id="pageDeleteContainer"></div>
             </div>
 
+            <div id="pageScanLog" class="page">
+                <h2 class="page-title">🧾 ประวัติการยิงเครื่องสแกนเนอร์</h2>
+                <p style="margin:0 0 12px; color:#8898aa; font-size:13px;">บันทึกอัตโนมัติทุกครั้งที่ยิงด้วยเครื่องสแกน ไม่ว่าจะยิงอยู่หน้าไหน (ต้องเปิดเว็บนี้ค้างไว้)</p>
+                <div class="order-search-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                    <input type="date" id="scanLogDate" class="search-input" style="flex:0 0 190px;" onchange="loadScanLog()">
+                    <input type="text" id="scanLogSearch" class="search-input" style="flex:1; min-width:180px;" placeholder="🔍 ค้นหารหัสที่ยิง..." onkeyup="loadScanLog()">
+                    <button type="button" class="multi-search-btn" onclick="loadScanLog()">🔄 รีเฟรช</button>
+                </div>
+                <div class="scanlog-summary">
+                    <div class="scanlog-chip">ทั้งหมด <b id="scanLogTotal">0</b></div>
+                    <div class="scanlog-chip">Tracking <b id="scanLogTracking">0</b></div>
+                    <div class="scanlog-chip">สินค้า <b id="scanLogProduct">0</b></div>
+                    <div class="scanlog-chip">ไม่พบในระบบ <b id="scanLogUnknown">0</b></div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-center">เวลา</th>
+                                <th>รหัสที่ยิง</th>
+                                <th class="text-center">ประเภท</th>
+                                <th>ยิงที่หน้า</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbScanLog"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="pageCctv" class="page">
                 <h2 class="page-title">📹 กล้อง CCTV <span class="cctv-title-sub">บันทึกอัตโนมัติเมื่อจับความเคลื่อนไหว</span></h2>
                 <div class="cctv-root">
@@ -477,9 +510,10 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="supabase-api.js?v=7"></script>
-<script src="script.js?v=41"></script>
+<script src="supabase-api.js?v=8"></script>
+<script src="script.js?v=42"></script>
 <script src="cctv.js?v=1"></script>
+<script src="scanlog.js?v=2"></script>
 
 </body>
 </html>-
