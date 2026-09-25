@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RRQC</title>
+    <link rel="icon" type="image/png" href="https://i.ibb.co/hFbqD7RH/Screenshot-2026-09-02-161323.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=20">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+<div id="pageLoader" class="page-loader">
+    <div class="page-loader-box">
+        <div class="page-loader-spinner"></div>
+        <p class="page-loader-text" id="pageLoaderText">⏳ กำลังโหลดข้อมูล...</p>
+    </div>
+</div>
+<div id="pageReadyBadge" class="page-ready-badge"></div>
+
+<div class="app-layout">
+
+    <div class="mobile-topbar">
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="เปิดเมนู">☰</button>
+        <img class="mobile-topbar-logo" src="https://i.ibb.co/hFbqD7RH/Screenshot-2026-09-02-161323.png" alt="โลโก้">
+        <span class="mobile-topbar-title">ร่ำรวย จำกัด</span>
+    </div>
+
+    <div id="mobileOverlay" class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <nav class="sidebar" id="sidebarNav" aria-label="Main navigation">
+
+        <button class="sidebar-close-btn" onclick="closeMobileMenu()" aria-label="ปิดเมนู">✕</button>
+
+        <div class="company-logo">
+            <img class="company-logo-img" src="https://i.ibb.co/hFbqD7RH/Screenshot-2026-09-02-161323.png" alt="โลโก้ บริษัท ร่ำรวย จำกัด">
+            <div class="company-text">
+                <div class="company-name">บริษัท ร่ำรวย จำกัด</div>
+                <div class="company-sub">RUM RUAY CO., LTD. · QC SYSTEM</div>
+            </div>
+        </div>
+
+        <div class="nav-group-title">งานตรวจสินค้า</div>
+        <button id="btnTabScan" class="tab-btn active" onclick="switchPage('pageScan', 'btnTabScan')">
+            <span>🔍 ตรวจสอบสินค้า (QC Scan)</span>
+        </button>
+
+        <button id="btnTabOrders" class="tab-btn" onclick="switchPage('pageOrders', 'btnTabOrders')">
+            <span>📋 รายการออเดอร์ (Orders)</span>
+        </button>
+
+        <button id="btnTabUpload" class="tab-btn" onclick="switchPage('pageUploadExcel', 'btnTabUpload')">
+            <span>📤 ทำ ฟวย (Upload Excel)</span>
+        </button>
+
+        <div class="nav-group-title">จัดการข้อมูล</div>
+        <button id="btnTabProducts" class="tab-btn" onclick="switchPage('pageProducts', 'btnTabProducts')">
+            <span>📦 จัดการสินค้า (Products)</span>
+        </button>
+
+        <div class="dropdown-container">
+            <button id="btnSubDropdown" class="tab-btn" onclick="toggleSubMenu()">
+                <span>🔄 สินค้าทดแทน (Substitutes)</span>
+                <span id="arrowSub">▼</span>
+            </button>
+            <div id="subMenuSubstitutes" class="sub-menu">
+                <button id="btnSubReplace" class="sub-btn" onclick="switchPage('pageSubReplace', 'btnSubReplace', true)">
+                    🔄 เปลี่ยนสินค้าทดแทน
+                </button>
+                <button id="btnSubDelete" class="sub-btn" onclick="switchPage('pageSubDelete', 'btnSubDelete', true)">
+                    🗑️ ตัดสินค้าออกจากออเดอร์
+                </button>
+            </div>
+        </div>
+
+        <div class="nav-group-title">ประวัติ &amp; กล้อง</div>
+        <button id="btnTabScanLog" class="tab-btn" onclick="switchPage('pageScanLog', 'btnTabScanLog')">
+            <span>🧾 ประวัติการยิงสแกนเนอร์</span>
+        </button>
+
+        <button id="btnTabCctv" class="tab-btn" onclick="switchPage('pageCctv', 'btnTabCctv')">
+            <span>📹 กล้อง CCTV</span>
+        </button>
+        <div class="sidebar-volume">
+            <label for="qcVolumeSlider" class="sidebar-volume-label">🔊 ระดับเสียงแจ้งเตือน QC</label>
+            <div class="sidebar-volume-row">
+                <input type="range" id="qcVolumeSlider" min="0" max="150" value="100" oninput="onQCVolumeChange(this.value)">
+                <span id="qcVolumeValue" class="sidebar-volume-value">100%</span>
+                <button type="button" class="sidebar-volume-test" onclick="playQCSound('correct')" title="ทดสอบเสียง">▶</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container">
+            <div id="msg" class="msg"></div>
+
+            <div id="pageScan" class="page active">
+                <div class="qc-page-header">
+                    <h2 class="page-title" style="margin-bottom:0;">🔍 สแกนตรวจสอบสินค้า (QC Inspection)</h2>
+                    <label class="qc-quickpass-toggle" title="ติ๊กแล้วสแกน Tracking No. จะยิงผ่านทันที ไม่ต้องเช็ค SKU ทีละชิ้น">
+                        <input type="checkbox" id="qcQuickPassCheck" onchange="localStorage.setItem('qcQuickPass', this.checked ? '1':'0')">
+                        <span>ยิงผ่าน (ข้าม SKU)</span>
+                    </label>
+                </div>
+                <div class="field-group">
+                    <div class="scan-input-wrap">
+                        <input type="text" id="scanOrder" class="search-input scannable-input" data-scan-enter="1" placeholder="สแกน หรือกรอก Tracking No. แล้วกด Enter" onkeydown="handleOrderScan(event)" autofocus>
+                        <button type="button" class="scan-cam-btn" onclick="openQrScanner('scanOrder')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                    </div>
+                </div>
+                <div id="orderDetail" style="display:none; margin-top:20px; border-top:2px solid #ccc; padding-top:15px;">
+                    <div class="order-detail-header">
+                        <h3 style="margin: 0;">ออเดอร์: <span id="txtTracking" style="color:#5e72e4;"></span></h3>
+                        <span id="totalItemsBadge" style="background-color: #11cdef; color: #ffffff; padding: 6px 18px; border-radius: 50px; font-weight: bold; font-size: 14px; display: inline-block;">
+                            สแกนแล้ว 0 / 0 ชิ้น
+                        </span>
+                    </div>
+                    <div class="field-group">
+                        <div class="scan-input-wrap">
+                            <input type="text" id="scanItem" class="search-input scannable-input" data-scan-enter="1" placeholder="สแกน บาร์โค้ด / SKU สินค้า แล้วกด Enter" onkeydown="handleItemScan(event)" disabled>
+                            <button type="button" class="scan-cam-btn" onclick="openQrScanner('scanItem')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>SKU สินค้า</th>
+                                    <th>ชื่อสินค้า / แบรนด์</th>
+                                    <th class="text-center">จำนวน (สแกน/ทั้งหมด)</th>
+                                    <th class="text-center">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbQCItems"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pageOrders" class="page">
+                <h2 class="page-title">📋 รายการออเดอร์ทั้งหมด (Orders)</h2>
+                <div class="field-group">
+                    <div class="order-search-row">
+                        <div class="scan-input-wrap" style="flex:1; min-width:200px;">
+                            <input type="text" id="searchOrderInput" class="search-input scannable-input" data-scan-call="filterOrders" placeholder="🔍 ค้นหา Tracking No. หรือ SKU สินค้า..." onkeyup="filterOrders()">
+                            <button type="button" class="scan-cam-btn" onclick="openQrScanner('searchOrderInput')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                        </div>
+                        <button type="button" class="multi-search-btn" onclick="openMultiSearchModal()" title="ค้นหาหลาย Tracking No. พร้อมกัน">📋 หลายรายการ</button>
+                    </div>
+                    <div id="multiSearchChip" class="multi-search-chip" style="display:none;"></div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tracking No.</th>
+                                <th>รายการสินค้า (จำนวน)</th>
+                                <th class="text-center">สถานะ QC</th>
+                                <th class="text-center">เวลาที่ QC</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbOrders"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-container" id="pageOrdContainer"></div>
+            </div>
+
+            <div id="pageProducts" class="page">
+                <h2 class="page-title">📦 จัดการรายการสินค้า (Master Products)</h2>
+                <form id="frmAddProduct" onsubmit="saveProduct(event)">
+                    <div class="form-row">
+                        <input type="hidden" id="prodEditRowIndex" value="">
+                        <input type="text" id="prodBrand" placeholder="แบรนด์/หมวดหมู่" required>
+                        <input type="text" id="prodSkuMerchant" placeholder="SKU Merchant" required>
+                        <div class="scan-input-wrap">
+                            <input type="text" id="prodGtin" class="scannable-input" placeholder="GTIN / บาร์โค้ด">
+                            <button type="button" class="scan-cam-btn" onclick="openQrScanner('prodGtin')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                        </div>
+                        <button type="submit" class="btn-primary" id="btnSaveProduct">➕ เพิ่มสินค้า</button>
+                        <button type="button" class="btn-revert" id="btnCancelEditProduct" style="display:none;" onclick="cancelEditProduct()">✖️ ยกเลิก</button>
+                    </div>
+                </form>
+
+                <div class="compact-card" id="prodImportCard">
+                    <div class="compact-row">
+                        <span class="compact-label">📥 นำเข้าสินค้าจากไฟล์ Excel (ลบของเดิมทั้งหมด แล้วนำเข้าใหม่) — เลือกได้หลายไฟล์พร้อมกัน</span>
+                        <input type="file" id="prodExcelFileInput" accept=".xlsx,.xls" class="input-box" multiple>
+                        <button type="button" class="btn-danger-compact" id="btnImportProducts" onclick="importProductsFromExcel()" disabled>🗑️⬆️ ลบทั้งหมด แล้วนำเข้าใหม่</button>
+                    </div>
+
+                    <div id="prodImportMappingWrap" style="display:none; margin-top:10px;">
+                        <div class="mapping-grid">
+                            <div class="mapping-field">
+                                <label for="mapProdSku">คอลัมน์ SKU Merchant *</label>
+                                <select id="mapProdSku" class="input-box" onchange="renderProductImportPreview()"></select>
+                            </div>
+                            <div class="mapping-field">
+                                <label for="mapProdBrand">คอลัมน์ แบรนด์/หมวดหมู่</label>
+                                <select id="mapProdBrand" class="input-box" onchange="renderProductImportPreview()"></select>
+                            </div>
+                            <div class="mapping-field">
+                                <label for="mapProdGtin">คอลัมน์ GTIN / บาร์โค้ด</label>
+                                <select id="mapProdGtin" class="input-box" onchange="renderProductImportPreview()"></select>
+                            </div>
+                        </div>
+                        <div class="import-warning">
+                            ⚠️ เมื่อกด "ลบทั้งหมด แล้วนำเข้าใหม่" ระบบจะ<b>ลบสินค้าเดิมทุกรายการในระบบทิ้งทั้งหมด</b>
+                            แล้วใส่ข้อมูลจากไฟล์นี้แทนทั้งหมด <b>การกระทำนี้ไม่สามารถย้อนกลับได้</b>
+                        </div>
+                    </div>
+
+                    <div id="prodImportStatusBox" style="display:none; margin-top:8px;"></div>
+                    <div id="prodImportSummary" class="import-summary" style="display:none;"></div>
+
+                    <div class="table-container" id="prodImportPreviewWrap" style="display:none; margin-top:8px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>แบรนด์</th>
+                                    <th>SKU Merchant</th>
+                                    <th>GTIN</th>
+                                    <th class="text-center">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prodImportPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <div class="scan-input-wrap">
+                        <input type="text" id="searchProdInput" class="search-input scannable-input" data-scan-call="filterProducts" placeholder="🔍 ค้นหาแบรนด์, SKU หรือ GTIN..." onkeyup="filterProducts()">
+                        <button type="button" class="scan-cam-btn" onclick="openQrScanner('searchProdInput')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>แบรนด์</th>
+                                <th>SKU Merchant</th>
+                                <th>GTIN</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbProducts"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-container" id="pageProdContainer"></div>
+            </div>
+
+            <div id="pageSubReplace" class="page">
+                <h2 class="page-title">🔄 เปลี่ยนสินค้าทดแทน (Replace Product)</h2>
+                <form id="formSubstitute" onsubmit="saveReplaceAction(event)">
+                    <input type="text" id="subTracking" class="input-box scannable-input" placeholder="Tracking No." required style="width:100%; margin-bottom:10px;">
+                    <div id="subRowsContainer" class="sub-rows-container"></div>
+                    <button type="button" class="btn-add-sub-row" id="btnAddSubRow" onclick="addSubstituteRow()">➕ เพิ่มรายการ</button>
+                    <datalist id="listNewSku"></datalist>
+                    <button type="submit" class="btn-submit" style="margin-top: 10px;">💾 บันทึกสินค้าทดแทน</button>
+                </form>
+                <div class="field-group">
+                    <input type="text" id="searchReplaceInput" class="search-input scannable-input" data-scan-call="filterSubstitutes" placeholder="🔍 ค้นหา Tracking หรือ SKU สินค้าทดแทน..." onkeyup="filterSubstitutes()">
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tracking No.</th>
+                                <th>SKU เดิม</th>
+                                <th class="text-center">จำนวนเดิม</th>
+                                <th>SKU ใหม่</th>
+                                <th class="text-center">จำนวนใหม่</th>
+                                <th class="text-center">วันที่บันทึก</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbSubReplace"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-container" id="pageReplaceContainer"></div>
+            </div>
+
+            <div id="pageSubDelete" class="page">
+                <h2 class="page-title">🗑️ ตัดสินค้าออกจากออเดอร์ (Delete Item)</h2>
+                <form id="deleteItemForm" onsubmit="removeItemFromOrder(event)">
+                    <input type="text" id="delTracking" class="input-box scannable-input" placeholder="Tracking No." required style="width:100%; margin-bottom:10px;">
+                    <div id="delRowsContainer" class="sub-rows-container"></div>
+                    <button type="button" class="btn-add-sub-row" id="btnAddDelRow" onclick="addDeleteRow()">➕ เพิ่มรายการ</button>
+                    <button type="submit" class="btn-danger" style="width:100%; margin-top:10px;">🗑️ บันทึกตัดออก</button>
+                </form>
+                <div class="field-group">
+                    <input type="text" id="searchDeleteInput" class="search-input scannable-input" data-scan-call="filterSubstitutes" placeholder="🔍 ค้นหา Tracking หรือ SKU ที่ถูกตัด..." onkeyup="filterSubstitutes()">
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tracking No.</th>
+                                <th>SKU ที่ถูกตัด</th>
+                                <th class="text-center">จำนวนที่ตัด</th>
+                                <th class="text-center">สถานะ</th>
+                                <th class="text-center">วันที่บันทึก</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbSubDelete"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-container" id="pageDeleteContainer"></div>
+            </div>
+
+            <div id="pageScanLog" class="page">
+                <h2 class="page-title">🧾 ประวัติการยิงเครื่องสแกนเนอร์</h2>
+                <p style="margin:0 0 12px; color:#8898aa; font-size:13px;">บันทึกอัตโนมัติทุกครั้งที่ยิงด้วยเครื่องสแกน ไม่ว่าจะยิงอยู่หน้าไหน เฉพาะรหัสที่ขึ้นต้นด้วย TH หรือ SPX (ต้องเปิดเว็บนี้ค้างไว้)</p>
+                <div class="order-search-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                    <input type="date" id="scanLogDate" class="search-input" style="flex:0 0 190px;" onchange="loadScanLog()">
+                    <input type="text" id="scanLogSearch" class="search-input" style="flex:1; min-width:180px;" placeholder="🔍 ค้นหารหัสที่ยิง..." onkeyup="loadScanLog()">
+                    <button type="button" class="multi-search-btn" onclick="loadScanLog()">🔄 รีเฟรช</button>
+                </div>
+                <div class="scanlog-summary">
+                    <div class="scanlog-chip">ทั้งหมด <b id="scanLogTotal">0</b></div>
+                    <div class="scanlog-chip">Tracking <b id="scanLogTracking">0</b></div>
+                    <div class="scanlog-chip">สินค้า <b id="scanLogProduct">0</b></div>
+                    <div class="scanlog-chip">ไม่พบในระบบ <b id="scanLogUnknown">0</b></div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-center">เวลา</th>
+                                <th>รหัสที่ยิง</th>
+                                <th class="text-center">ประเภท</th>
+                                <th>ยิงที่หน้า</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbScanLog"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="pageCctv" class="page">
+                <h2 class="page-title">📹 กล้อง CCTV <span class="cctv-title-sub">บันทึกอัตโนมัติเมื่อจับความเคลื่อนไหว</span></h2>
+                <div class="cctv-root">
+                    <div class="cctv-notice" id="cctvContextNotice" style="display:none;">
+                        <strong>ต้องเปิดผ่านเซิร์ฟเวอร์ท้องถิ่น:</strong> หน้านี้ถูกเปิดแบบ <code>file://</code> โดยตรง
+                        ทำให้เบราว์เซอร์ปิดกั้นการเลือกโฟลเดอร์บันทึกไฟล์ กรุณาเปิดผ่าน <code>http://localhost</code> หรือ Live Server
+                        ไฟล์จะยังบันทึกได้ด้วยการดาวน์โหลดอัตโนมัติ แต่จะเลือกโฟลเดอร์ปลายทางเองไม่ได้
+                    </div>
+
+                    <div class="cctv-tabs">
+                        <button type="button" class="active" id="cctvTabLive">🔴 กล้องสด</button>
+                        <button type="button" id="cctvTabPb">⏪ ดูย้อนหลัง</button>
+                    </div>
+
+                    <div id="cctvLiveView">
+                    <div class="cctv-workspace">
+                        <div class="cctv-monitor" id="cctvMonitor">
+                            <video id="cctvVideo" autoplay muted playsinline style="display:none;"></video>
+                            <canvas class="cctv-overlay" id="cctvOverlay"></canvas>
+                            <canvas id="cctvRecordCanvas" style="display:none;"></canvas>
+                            <div class="cctv-scan"></div>
+                            <div class="cctv-vignette"></div>
+                            <div class="cctv-hud" id="cctvHud"><span class="cctv-dot"></span><span id="cctvHudText">ยังไม่ได้เปิดกล้อง</span></div>
+                            <div class="cctv-timestamp" id="cctvTimestamp"></div>
+                            <div class="cctv-placeholder" id="cctvPlaceholder">กำลังเปิดกล้อง... กรุณาอนุญาตการเข้าถึงกล้องหากเบราว์เซอร์ถาม</div>
+                        </div>
+
+                        <div class="cctv-panels">
+                            <div class="cctv-card">
+                                <h3>การควบคุม</h3>
+                                <div class="cctv-btnrow">
+                                    <button type="button" class="cctv-primary" id="cctvBtnStart">เปิดกล้อง</button>
+                                    <button type="button" id="cctvBtnFolder">เลือกโฟลเดอร์บันทึก</button>
+                                    <input id="cctvFolderInput" type="file" webkitdirectory directory multiple hidden>
+                                    <button type="button" class="cctv-danger" id="cctvBtnStop" disabled>ปิดกล้อง</button>
+                                </div>
+
+                                <div class="cctv-row">
+                                    <div><label for="cctvSensitivity">ความไว</label><span class="cctv-hint">ลากไปทางซ้าย = ต้องขยับแรงกว่าถึงจะบันทึก</span></div>
+                                    <input type="range" id="cctvSensitivity" min="1" max="10" value="5">
+                                </div>
+                                <div class="cctv-row">
+                                    <div><label for="cctvCooldown">หยุดอัดหลังไม่มีการเคลื่อนไหว</label><span class="cctv-hint">กล้องไม่ปิด แค่หยุดอัดคลิปแล้วเฝ้าระวังต่อ</span></div>
+                                    <select id="cctvCooldown">
+                                        <option value="3000">3 วินาที</option>
+                                        <option value="5000" selected>5 วินาที</option>
+                                        <option value="10000">10 วินาที</option>
+                                    </select>
+                                </div>
+                                <div class="cctv-row">
+                                    <div><label for="cctvCamSelect">เลือกกล้อง</label></div>
+                                    <select id="cctvCamSelect"><option>อุปกรณ์เดียว</option></select>
+                                </div>
+                                <div class="cctv-row">
+                                    <div><label for="cctvResolution">ความละเอียด</label><span class="cctv-hint">กล้องบางรุ่นอาจไม่รองรับทุกขนาด</span></div>
+                                    <select id="cctvResolution">
+                                        <option value="auto">อัตโนมัติ (ไม่แนะนำ)</option>
+                                        <option value="320x240">320 x 240</option>
+                                        <option value="640x480" selected>640 x 480</option>
+                                        <option value="1280x720">1280 x 720 HD</option>
+                                        <option value="1920x1080">1920 x 1080 Full HD</option>
+                                        <option value="2560x1440">2560 x 1440 2K</option>
+                                    </select>
+                                </div>
+
+                                <div class="cctv-status-line">
+                                    สถานะ: <strong id="cctvStatusText">ปิดอยู่</strong><br>
+                                    โฟลเดอร์ปลายทาง: <span class="cctv-folder-path" id="cctvFolderPath">ยังไม่ได้เลือก</span>
+                                </div>
+                            </div>
+
+                            <div class="cctv-card">
+                                <h3>ประวัติการบันทึก</h3>
+                                <ul class="cctv-log" id="cctvLog"><li class="cctv-log-empty">ยังไม่มีคลิปที่บันทึก</li></ul>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div id="cctvPbView" hidden>
+                    <div class="cctv-card cctv-playback" id="cctvPlayback">
+                        <div class="cctv-quick">
+                            <span>เลือกช่วงเวลา:</span>
+                            <button type="button" data-quick="hour">1 ชม.ล่าสุด</button>
+                            <button type="button" data-quick="today">วันนี้</button>
+                            <button type="button" data-quick="yesterday">เมื่อวาน</button>
+                        </div>
+                        <div class="cctv-pb-controls">
+                            <label>วันที่ <input type="date" id="cctvPbDate"></label>
+                            <label>ตั้งแต่ <input type="time" id="cctvPbFrom" value="00:00"></label>
+                            <label>ถึง <input type="time" id="cctvPbTo" value="23:59"></label>
+                            <button type="button" class="cctv-primary" id="cctvPbLoad">🔍 ค้นหาคลิป</button>
+                            <span class="cctv-hint" id="cctvPbInfo">เลือกวันและช่วงเวลา แล้วกด "ค้นหาคลิป"</span>
+                        </div>
+                        <div class="cctv-pb-player">
+                            <video id="cctvPbVideo" controls playsinline></video>
+                            <div class="cctv-pb-now" id="cctvPbNow">--:--:--</div>
+                        </div>
+                        <div class="cctv-pb-actions">
+                            <button type="button" id="cctvPbPrev" disabled>⏮ คลิปก่อนหน้า</button>
+                            <button type="button" id="cctvPbNext" disabled>คลิปถัดไป ⏭</button>
+                            <span class="cctv-spacer"></span>
+                            <button type="button" id="cctvPbDownload" disabled>⬇ ดาวน์โหลดคลิปนี้</button>
+                            <button type="button" id="cctvPbDownloadAll" disabled>⬇ ดาวน์โหลดทั้งช่วง</button>
+                        </div>
+                        <div class="cctv-tl-wrap">
+                            <div class="cctv-tl" id="cctvTl"><div class="cctv-tl-head" id="cctvTlHead" hidden></div></div>
+                            <div class="cctv-tl-ticks" id="cctvTlTicks"></div>
+                        </div>
+                        <ul class="cctv-log cctv-pb-list" id="cctvPbList"></ul>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pageUploadExcel" class="page">
+                <h2 class="page-title">📤 ทำ ฟวย</h2>
+
+                <div class="compact-card" id="fuayUploadCard">
+                    <div class="compact-row">
+                        <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="input-box">
+                        <button type="button" class="btn-submit-compact" onclick="uploadExcelFile()">⬆️ อัปโหลด</button>
+                    </div>
+                    <div id="uploadStatusBox" style="display:none; margin-top:8px;"></div>
+                    <div class="table-container" style="margin-top:8px;">
+                        <table>
+                            <thead>
+                                <tr id="excelPreviewHeader"></tr>
+                            </thead>
+                            <tbody id="excelPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="fuaySummaryGrid" class="fuay-summary" style="margin-top:16px;"></div>
+
+                <div class="compact-card" id="fuayCheckCard" style="margin-top:16px;">
+                    <div class="scan-input-wrap">
+                        <input type="text" id="searchFuayInput" class="search-input scannable-input" placeholder="🔍 สแกน หรือกรอก Tracking No. เพื่อเช็ค แล้วกด Enter" onkeydown="handleFuaySearchEnter(event)" autocomplete="off">
+                        <button type="button" class="scan-cam-btn" onclick="openQrScanner('searchFuayInput')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                    </div>
+                    <div id="fuayCheckStatus" class="msg" style="display:none; margin-top:8px;"></div>
+                    <div class="fuay-check-actions">
+                        <button type="button" class="fuay-view-checked-btn" id="btnViewChecked" onclick="showFuayCheckedList()">✅ ดูรายการที่เช็คแล้วทั้งหมด (<span id="fuayCheckedCount">0</span>)</button>
+                        <button type="button" class="fuay-reset-checked-btn" onclick="resetFuayChecked()">🔄 รีเซ็ต</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="fuay-data-table">
+                        <thead>
+                            <tr id="fuayTableHeader"></tr>
+                        </thead>
+                        <tbody id="tbFuayData"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<div id="appDialog" class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" aria-describedby="appDialogMessage">
+    <div class="app-dialog-card">
+        <div class="app-dialog-icon">!</div>
+        <h3 id="appDialogTitle">แจ้งเตือน</h3>
+        <p id="appDialogMessage"></p>
+        <div class="app-dialog-actions">
+            <button id="appDialogCancel" class="app-dialog-btn app-dialog-btn-secondary" type="button">ยกเลิก</button>
+            <button id="appDialogOk" class="app-dialog-btn app-dialog-btn-primary" type="button">ตกลง</button>
+        </div>
+    </div>
+</div>
+<div id="qrScanModal" class="qr-scan-modal">
+    <div class="qr-scan-card">
+        <div class="qr-scan-header">
+            <span>📷 สแกนบาร์โค้ด / QR Code</span>
+            <button type="button" class="qr-scan-close" onclick="closeQrScanner()" aria-label="ปิด">✕</button>
+        </div>
+        <div id="qrReaderRegion"></div>
+        <p class="qr-scan-hint">เล็งกล้องไปที่บาร์โค้ดหรือ QR Code ให้อยู่ในกรอบ</p>
+    </div>
+</div>
+<div id="cameraScanModal" class="camera-scan-modal">
+    <div class="camera-scan-card">
+        <div class="camera-scan-header">
+            <span>📷 สแกนด้วยกล้อง</span>
+            <button type="button" class="camera-scan-close" onclick="closeCameraScanner()" aria-label="ปิด">✕</button>
+        </div>
+        <div id="cameraScanReader"></div>
+        <p class="camera-scan-hint">เล็งกล้องไปที่ QR Code หรือบาร์โค้ดสินค้า</p>
+    </div>
+</div>
+<div id="multiSearchModal" class="camera-scan-modal">
+    <div class="camera-scan-card" style="max-width:420px;">
+        <div class="camera-scan-header">
+            <span>📋 ค้นหาหลาย Tracking No.</span>
+            <button type="button" class="camera-scan-close" onclick="closeMultiSearchModal()" aria-label="ปิด">✕</button>
+        </div>
+        <p class="camera-scan-hint" style="margin:0 0 8px;">วางหรือพิมพ์หลายหมายเลข คั่นด้วยการขึ้นบรรทัดใหม่ จุลภาค หรือเว้นวรรค</p>
+        <textarea id="multiSearchTextarea" class="multi-search-textarea" maxlength="3000" oninput="updateMultiSearchCounter()" placeholder="เช่น&#10;TH123456789N&#10;TH987654321X"></textarea>
+        <div class="multi-search-footer">
+            <span id="multiSearchCounter">0 รายการ</span>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="app-dialog-btn app-dialog-btn-secondary" onclick="closeMultiSearchModal()">ยกเลิก</button>
+                <button type="button" class="app-dialog-btn app-dialog-btn-primary" onclick="applyMultiSearch()">ค้นหา</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-api.js?v=8"></script>
+<script src="js/script.js?v=42"></script>
+<script src="js/cctv.js?v=7"></script>
+<script src="js/scanlog.js?v=4"></script>
+
+</body>
+</html>-
