@@ -61,6 +61,46 @@
   sensitivityInput.addEventListener('input', saveSettings);
   cooldownSelect.addEventListener('change', saveSettings);
   camSelect.addEventListener('change', saveSettings);
+  // ---- หมุนภาพ (กล้องติดตั้งตะแคง/กลับหัว): เก็บมุมแยกกันระหว่างเครื่องที่มีกล้องกับเครื่องที่ดู ----
+  const ROT_KEY = 'cctv-rotate', ROT_VIEW_KEY = 'cctv-rotate-view';
+  const monitorEl = $('cctvMonitor');
+  const readRot = k => { let v = null; try { v = parseInt(localStorage.getItem(k), 10); } catch (e) {} return [0, 90, 180, 270].includes(v) ? v : null; };
+  let rotation = 0, srcW = 640, srcH = 480, pendingResize = false, hostCfgRot = null;
+
+  function layoutForRotation(w, h) {
+    if (w && h) { srcW = w; srcH = h; }
+    const swap = rotation % 180 !== 0;
+    const cw = swap ? srcH : srcW, ch = swap ? srcW : srcH;
+    if (!isRecording) {
+      overlay.width = cw; overlay.height = ch; recordCanvas.width = cw; recordCanvas.height = ch;
+      pendingResize = false;
+    } else pendingResize = true;   // กำลังอัดคลิป ไม่เปลี่ยนขนาดผืนผ้าใบกลางคัน
+    monitorEl.style.aspectRatio = cw + ' / ' + ch;
+    monitorEl.style.setProperty('--cctv-ar', String(cw / ch));
+    ['rot-0', 'rot-90', 'rot-180', 'rot-270'].forEach(c => monitorEl.classList.remove(c));
+    monitorEl.classList.add('rot-' + rotation);
+  }
+  // มุมภาพเป็นของกล้อง เก็บที่เครื่องหลักที่เดียว: เครื่องที่ดูสั่งเปลี่ยนได้จากในเว็บ (ส่งคำสั่งไปเครื่องหลัก แล้วทุกเครื่องหมุนตาม)
+  function rotationForRole(r) { return r === 'viewer' ? (hostCfgRot ?? 0) : (readRot(ROT_KEY) ?? 0); }
+  function syncRotSelects() { ['cctvRotSelHost', 'cctvRotSelView'].forEach(id => { const el = $(id); if (el) el.value = String(rotation); }); }
+  function setRotation(deg) {
+    if (role === 'viewer') {
+      if (viewDc && viewDc.readyState === 'open') viewDc.send(JSON.stringify({ t: 'setRot', rot: deg }));
+      else { syncRotSelects(); notify('ยังไม่ได้เชื่อมต่อกับเครื่องหลัก — กด "เชื่อมต่อ" ก่อน'); }
+      return;
+    }
+    rotation = deg;
+    try { localStorage.setItem(ROT_KEY, String(deg)); } catch (e) {}
+    layoutForRotation();
+    syncRotSelects();
+    hostPeers.forEach(pc => sendHostCfg(pc._dc));
+  }
+  $('cctvRotateBtn').addEventListener('click', () => setRotation((rotation + 90) % 360));
+  ['cctvRotSelHost', 'cctvRotSelView'].forEach(id => { const el = $(id); if (el) el.addEventListener('change', () => setRotation(Number(el.value))); });
+  const remoteEl = $('cctvRemote');
+  remoteEl.addEventListener('loadedmetadata', () => layoutForRotation(remoteEl.videoWidth, remoteEl.videoHeight));
+  remoteEl.addEventListener('resize', () => layoutForRotation(remoteEl.videoWidth, remoteEl.videoHeight));
+
   // เปลี่ยนความละเอียด = ปิดกระแสเดิมแล้วเปิดใหม่ (การสลับสดๆ ทำให้ภาพเสียในกล้อง USB บางรุ่น)
   // กล้องต้องใช้เวลาปล่อยตัวเองก่อน จึงรอแล้วลองซ้ำหลายรอบ ถ้าไม่ได้จริงๆ จะย้อนกลับค่าเดิมให้กล้องไม่ดับ
   async function reopenCamera() {
@@ -78,8 +118,7 @@
         buildAdjustPanel();
         hostRefreshTracks();
         const w = video.videoWidth || 640, h = video.videoHeight || 480;
-        overlay.width = w; overlay.height = h; recordCanvas.width = w; recordCanvas.height = h;
-        $('cctvMonitor').style.aspectRatio = w + ' / ' + h;
+        layoutForRotation(w, h);
         return;
       } catch (e) { lastErr = e; }
     }
@@ -312,8 +351,7 @@
       if (usedFallback) notify('กล้องเปิดไม่ได้ที่ความละเอียดที่เลือก จึงเปิดด้วยค่าพื้นฐาน 640 x 480 แทน\nลองเลือกความละเอียดต่ำลง (เช่น 1280 x 720) หรือเสียบกล้องพอร์ต USB 3.0 ตรงที่ตัวเครื่อง');
       placeholder.style.display = 'none';
       const w = video.videoWidth || 640, h = video.videoHeight || 480;
-      overlay.width = w; overlay.height = h; recordCanvas.width = w; recordCanvas.height = h;
-      $('cctvMonitor').style.aspectRatio = w + ' / ' + h;   // กรอบภาพตามสัดส่วนกล้องจริง (16:9 ไม่โดนตัด)
+      layoutForRotation(w, h);   // กรอบภาพตามสัดส่วนกล้องจริงและมุมที่หมุน
       await listCameras();
       btnStart.disabled = true; btnStop.disabled = false;
       statusText.textContent = 'เปิดกล้องแล้ว — กรุณาเลือกโฟลเดอร์บันทึก';
@@ -348,7 +386,12 @@
     function draw() {
       if (!renderLoopActive || !stream) return;
       const w = recordCanvas.width, h = recordCanvas.height;
-      rctx.drawImage(video, 0, 0, w, h);
+      const vw = video.videoWidth || srcW, vh = video.videoHeight || srcH;
+      rctx.save();
+      rctx.translate(w / 2, h / 2);
+      rctx.rotate(rotation * Math.PI / 180);   // คลิปที่บันทึกก็หมุนตามมุมที่ตั้งไว้ เปิดดูย้อนหลังแล้วภาพตั้งตรง
+      rctx.drawImage(video, -vw / 2, -vh / 2, vw, vh);
+      rctx.restore();
       // ฝังวันเวลามุมขวาล่างลงในคลิป เหมือนกล้องวงจรปิดจริง
       rctx.font = `${Math.max(14, Math.round(h * 0.035))}px monospace`;
       rctx.textBaseline = 'bottom'; rctx.textAlign = 'right';
@@ -450,6 +493,7 @@
   function stopRecording() {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     isRecording = false;
+    if (pendingResize) layoutForRotation();   // หมุนภาพระหว่างอัดคลิป → ปรับขนาดผืนผ้าใบหลังคลิปจบ
     setHud('armed');
     statusText.textContent = 'กำลังเฝ้าระวังความเคลื่อนไหว';
   }
@@ -824,6 +868,8 @@
     const dc = pc.createDataChannel('files');
     dc.binaryType = 'arraybuffer';
     dc._chain = Promise.resolve();
+    pc._dc = dc;
+    dc.onopen = () => sendHostCfg(dc);
     dc.onmessage = e => {
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
       dc._chain = dc._chain.then(() => hostHandleFileMsg(dc, m)).catch(() => {});
@@ -847,8 +893,13 @@
       hostSend({ type: 'offer', to: id, from: 'host', sdp: pc.localDescription });
     } catch (e) { closeHostPeer(id); }
   }
+  function sendHostCfg(dc) {
+    if (dc && dc.readyState === 'open') dc.send(JSON.stringify({ t: 'cfg', rot: readRot(ROT_KEY) ?? 0 }));
+  }
+
   async function hostHandleFileMsg(dc, m) {
     const reply = o => { if (dc.readyState === 'open') dc.send(JSON.stringify(o)); };
+    if (m.t === 'setRot') { if ([0, 90, 180, 270].includes(m.rot) && role === 'host') setRotation(m.rot); return; }   // เครื่องที่ดูสั่งหมุนภาพ
     if (!dirHandle) return reply({ t: 'err', id: m.id, msg: 'เครื่องหลักยังไม่ได้เชื่อมต่อโฟลเดอร์บันทึก (กดปุ่มโฟลเดอร์ที่เครื่องหลักก่อน)' });
     try {
       if (m.t === 'list') {
@@ -907,6 +958,11 @@
   function onViewerDcMsg(data) {
     if (typeof data === 'string') {
       let m; try { m = JSON.parse(data); } catch (e) { return; }
+      if (m.t === 'cfg') {   // เครื่องหลักบอกมุมกล้อง: ถ้าเครื่องนี้ยังไม่ได้ตั้งมุมเอง ใช้ตามเครื่องหลัก
+        hostCfgRot = [0, 90, 180, 270].includes(m.rot) ? m.rot : 0;
+        rotation = hostCfgRot; layoutForRotation(); syncRotSelects();
+        return;
+      }
       const p = dcPending.get(m.id);
       if (!p) return;
       if (m.t === 'list') { dcPending.delete(m.id); p.resolve(m.clips); }
@@ -998,6 +1054,7 @@
   function applyRole(r, fromUser) {
     role = r; lsSet(ROLE_KEY, r);
     liveView.dataset.role = r;
+    rotation = rotationForRole(r); layoutForRotation(); syncRotSelects();
     roleHostBtn.classList.toggle('active', r === 'host');
     roleViewBtn.classList.toggle('active', r === 'viewer');
     if (r === 'viewer') {

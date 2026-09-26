@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=22">
+    <link rel="stylesheet" href="css/style.css?v=23">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -371,6 +371,7 @@
                         <div class="cctv-monitor" id="cctvMonitor">
                             <video id="cctvVideo" class="cctv-host-only" autoplay muted playsinline style="display:none;"></video>
                             <video id="cctvRemote" class="cctv-viewer-only" autoplay muted playsinline></video>
+                            <button type="button" class="cctv-rotate-btn" id="cctvRotateBtn" title="หมุนภาพทีละ 90° (ตั้ง/นอน/กลับหัว)">🔄 หมุนภาพ</button>
                             <canvas class="cctv-overlay cctv-host-only" id="cctvOverlay"></canvas>
                             <canvas id="cctvRecordCanvas" style="display:none;"></canvas>
                             <div class="cctv-scan"></div>
@@ -386,6 +387,10 @@
                                 <div class="cctv-row">
                                     <div><label for="cctvViewCode">รหัสดูกล้อง</label><span class="cctv-hint">ดูรหัสได้ที่เครื่องที่เสียบกล้อง (การ์ด "แชร์ให้มือถือดู")</span></div>
                                     <input type="text" id="cctvViewCode" class="cctv-code-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="รหัส 8 ตัว">
+                                </div>
+                                <div class="cctv-row">
+                                    <div><label for="cctvRotSelView">การหมุนภาพ</label><span class="cctv-hint">สั่งหมุนที่กล้องของเครื่องหลักจากตรงนี้ได้เลย (เครื่องอื่นที่ดูอยู่หมุนตามด้วย)</span></div>
+                                    <select id="cctvRotSelView"><option value="0">ปกติ</option><option value="90">หมุนขวา 90°</option><option value="180">กลับหัว 180°</option><option value="270">หมุนซ้าย 90°</option></select>
                                 </div>
                                 <div class="cctv-btnrow">
                                     <button type="button" class="cctv-primary" id="cctvViewConnect">เชื่อมต่อ</button>
@@ -418,6 +423,10 @@
                                 <div class="cctv-row">
                                     <div><label for="cctvCamSelect">เลือกกล้อง</label></div>
                                     <select id="cctvCamSelect"><option>อุปกรณ์เดียว</option></select>
+                                </div>
+                                <div class="cctv-row">
+                                    <div><label for="cctvRotSelHost">การหมุนภาพ</label><span class="cctv-hint">กล้องติดตั้งตะแคงหรือกลับหัว (คลิปที่บันทึกจะตั้งตรงด้วย)</span></div>
+                                    <select id="cctvRotSelHost"><option value="0">ปกติ</option><option value="90">หมุนขวา 90°</option><option value="180">กลับหัว 180°</option><option value="270">หมุนซ้าย 90°</option></select>
                                 </div>
                                 <div class="cctv-row">
                                     <div><label for="cctvResolution">ความละเอียด</label><span class="cctv-hint">กล้องบางรุ่นอาจไม่รองรับทุกขนาด</span></div>
@@ -596,7 +605,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-api.js?v=9"></script>
 <script src="js/script.js?v=42"></script>
-<script src="js/cctv.js?v=20"></script>
+<script src="js/cctv.js?v=22"></script>
 <script src="js/scanlog.js?v=5"></script>
 
 </body>
