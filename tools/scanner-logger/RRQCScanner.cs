@@ -39,6 +39,7 @@ static class Cfg
     public static string PendingFile { get { return Path.Combine(Dir, "pending.txt"); } }
     public static string[] Prefixes = new string[] { "TH", "SPX" };
     public static bool Paused = false;
+    public static string Machine = Environment.MachineName;   // ชื่อเครื่องที่แสดงในหน้าประวัติของเว็บ แก้ได้ในหน้าต่างโปรแกรม
 
     public static string[] ParsePrefixes(string s)
     {
@@ -62,6 +63,7 @@ static class Cfg
                 string k = line.Substring(0, i).Trim(), v = line.Substring(i + 1).Trim();
                 if (k == "prefixes") Prefixes = ParsePrefixes(v);
                 if (k == "paused") Paused = (v == "1");
+                if (k == "machine" && v.Length > 0) Machine = v;
             }
         }
         catch { }
@@ -72,7 +74,7 @@ static class Cfg
         try
         {
             Directory.CreateDirectory(Dir);
-            File.WriteAllLines(SettingsFile, new string[] { "prefixes=" + string.Join(",", Prefixes), "paused=" + (Paused ? "1" : "0") }, Encoding.UTF8);
+            File.WriteAllLines(SettingsFile, new string[] { "prefixes=" + string.Join(",", Prefixes), "paused=" + (Paused ? "1" : "0"), "machine=" + Machine }, Encoding.UTF8);
         }
         catch { }
     }
@@ -253,7 +255,7 @@ static class Engine
                 s.BackedUp = true;
             }
 
-            string json = "[{\"code\":\"" + Esc(s.Code) + "\",\"kind\":\"scanned\",\"page\":\"app:" + Esc(s.App) + "\",\"input_id\":null,\"created_at\":\"" + s.Utc.ToString("o") + "\"}]";
+            string json = "[{\"code\":\"" + Esc(s.Code) + "\",\"kind\":\"scanned\",\"page\":\"app:" + Esc(s.App) + "\",\"machine\":\"" + Esc(Cfg.Machine) + "\",\"input_id\":null,\"created_at\":\"" + s.Utc.ToString("o") + "\"}]";
             try
             {
                 HttpWebRequest r = (HttpWebRequest)WebRequest.Create(Cfg.Url + "/rest/v1/scan_log");
@@ -342,7 +344,7 @@ class MainForm : Form
     NotifyIcon tray;
     Label pill, cardToday, cardSent, cardWait;
     ListView list;
-    TextBox prefixBox;
+    TextBox prefixBox, machineBox;
     CheckBox startupBox;
     Button pauseBtn;
     ToolStripMenuItem pauseItem;
@@ -490,16 +492,24 @@ class MainForm : Form
         // controls
         Panel bottom = new Panel(); bottom.Dock = DockStyle.Fill; bottom.Margin = new Padding(0);
         Label pl = MakeLabel("บันทึกเฉพาะรหัสที่ขึ้นต้นด้วย (คั่นด้วยจุลภาค เช่น TH, SPX)", 9f, FontStyle.Regular, Muted); pl.Location = new Point(18, 12);
-        prefixBox = new TextBox(); prefixBox.Location = new Point(20, 34); prefixBox.Width = 220; prefixBox.Text = string.Join(", ", Cfg.Prefixes);
-        Button saveBtn = new Button(); saveBtn.Text = "บันทึก"; saveBtn.Location = new Point(248, 32); saveBtn.Size = new Size(76, 28);
-        saveBtn.Click += delegate { Cfg.Prefixes = Cfg.ParsePrefixes(prefixBox.Text); prefixBox.Text = string.Join(", ", Cfg.Prefixes); Cfg.Save(); };
+        prefixBox = new TextBox(); prefixBox.Location = new Point(20, 34); prefixBox.Width = 200; prefixBox.Text = string.Join(", ", Cfg.Prefixes);
+        Label ml = MakeLabel("ชื่อเครื่องนี้ (แสดงในหน้าประวัติของเว็บ)", 9f, FontStyle.Regular, Muted); ml.Location = new Point(300, 12);
+        machineBox = new TextBox(); machineBox.Location = new Point(302, 34); machineBox.Width = 190; machineBox.MaxLength = 40; machineBox.Text = Cfg.Machine;
+        Button saveBtn = new Button(); saveBtn.Text = "บันทึก"; saveBtn.Location = new Point(504, 32); saveBtn.Size = new Size(76, 28);
+        saveBtn.Click += delegate
+        {
+            Cfg.Prefixes = Cfg.ParsePrefixes(prefixBox.Text); prefixBox.Text = string.Join(", ", Cfg.Prefixes);
+            string mn = machineBox.Text.Trim();
+            Cfg.Machine = mn.Length > 0 ? mn : Environment.MachineName; machineBox.Text = Cfg.Machine;
+            Cfg.Save();
+        };
         startupBox = new CheckBox(); startupBox.Text = "เปิดโปรแกรมอัตโนมัติพร้อมวินโดวส์"; startupBox.AutoSize = true; startupBox.Location = new Point(20, 76);
         startupBox.Checked = IsStartupOn();
         startupBox.CheckedChanged += delegate { SetStartup(startupBox.Checked); };
         pauseBtn = new Button(); pauseBtn.Size = new Size(130, 32);        pauseBtn.Click += delegate { TogglePause(); };
         Button hideBtn = new Button(); hideBtn.Text = "ซ่อนไปที่ถาดระบบ"; hideBtn.Size = new Size(150, 32); bottom.Resize += delegate { hideBtn.Location = new Point(bottom.Width - hideBtn.Width - 22, 72); pauseBtn.Location = new Point(hideBtn.Left - pauseBtn.Width - 10, 72); };
         hideBtn.Click += delegate { Close(); };
-        bottom.Controls.AddRange(new Control[] { pl, prefixBox, saveBtn, startupBox, pauseBtn, hideBtn });
+        bottom.Controls.AddRange(new Control[] { pl, prefixBox, ml, machineBox, saveBtn, startupBox, pauseBtn, hideBtn });
         root.Controls.Add(bottom, 0, 3);
     }
 

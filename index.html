@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20">
+    <link rel="stylesheet" href="css/style.css?v=22">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -317,10 +317,11 @@
 
             <div id="pageScanLog" class="page">
                 <h2 class="page-title">🧾 ประวัติการยิงเครื่องสแกนเนอร์</h2>
-                <p style="margin:0 0 12px; color:#8898aa; font-size:13px;">บันทึกอัตโนมัติทุกครั้งที่ยิงด้วยเครื่องสแกน ไม่ว่าจะยิงอยู่หน้าไหน เฉพาะรหัสที่ขึ้นต้นด้วย TH หรือ SPX (ต้องเปิดเว็บนี้ค้างไว้)</p>
+                <p style="margin:0 0 12px; color:#8898aa; font-size:13px;">บันทึกทุกครั้งที่ยิงด้วยเครื่องสแกน เฉพาะรหัสที่ขึ้นต้นด้วย TH หรือ SPX — รวมทุกเครื่องที่ติดตั้งโปรแกรม RRQC Scanner (ยิงอยู่โปรแกรมไหนก็บันทึก) และยิงในหน้าเว็บนี้</p>
                 <div class="order-search-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
                     <input type="date" id="scanLogDate" class="search-input" style="flex:0 0 190px;" onchange="loadScanLog()">
                     <input type="text" id="scanLogSearch" class="search-input" style="flex:1; min-width:180px;" placeholder="🔍 ค้นหารหัสที่ยิง..." onkeyup="loadScanLog()">
+                    <select id="scanLogMachine" class="search-input" style="flex:0 0 190px;" onchange="loadScanLog()"><option value="">🖥️ ทุกเครื่อง</option></select>
                     <button type="button" class="multi-search-btn" onclick="loadScanLog()">🔄 รีเฟรช</button>
                 </div>
                 <div class="scanlog-summary">
@@ -336,7 +337,8 @@
                                 <th class="text-center">เวลา</th>
                                 <th>รหัสที่ยิง</th>
                                 <th class="text-center">ประเภท</th>
-                                <th>ยิงที่หน้า</th>
+                                <th>เครื่อง</th>
+                                <th>ยิงที่หน้า / โปรแกรม</th>
                             </tr>
                         </thead>
                         <tbody id="tbScanLog"></tbody>
@@ -353,26 +355,46 @@
                         ไฟล์จะยังบันทึกได้ด้วยการดาวน์โหลดอัตโนมัติ แต่จะเลือกโฟลเดอร์ปลายทางเองไม่ได้
                     </div>
 
-                    <div class="cctv-tabs">
-                        <button type="button" class="active" id="cctvTabLive">🔴 กล้องสด</button>
-                        <button type="button" id="cctvTabPb">⏪ ดูย้อนหลัง</button>
+                    <div class="cctv-topbar">
+                        <div class="cctv-tabs">
+                            <button type="button" class="active" id="cctvTabLive">🔴 กล้องสด</button>
+                            <button type="button" id="cctvTabPb">⏪ ดูย้อนหลัง</button>
+                        </div>
+                        <div class="cctv-tabs cctv-role" title="เครื่องที่เสียบกล้อง EMEET = เครื่องนี้เป็นกล้อง / มือถือหรือเครื่องอื่น = ดูกล้อง">
+                            <button type="button" id="cctvRoleHost">📷 เครื่องนี้มีกล้อง</button>
+                            <button type="button" id="cctvRoleView">📱 ดูกล้องจากเครื่องอื่น</button>
+                        </div>
                     </div>
 
-                    <div id="cctvLiveView">
+                    <div id="cctvLiveView" data-role="host">
                     <div class="cctv-workspace">
                         <div class="cctv-monitor" id="cctvMonitor">
-                            <video id="cctvVideo" autoplay muted playsinline style="display:none;"></video>
-                            <canvas class="cctv-overlay" id="cctvOverlay"></canvas>
+                            <video id="cctvVideo" class="cctv-host-only" autoplay muted playsinline style="display:none;"></video>
+                            <video id="cctvRemote" class="cctv-viewer-only" autoplay muted playsinline></video>
+                            <canvas class="cctv-overlay cctv-host-only" id="cctvOverlay"></canvas>
                             <canvas id="cctvRecordCanvas" style="display:none;"></canvas>
                             <div class="cctv-scan"></div>
                             <div class="cctv-vignette"></div>
                             <div class="cctv-hud" id="cctvHud"><span class="cctv-dot"></span><span id="cctvHudText">ยังไม่ได้เปิดกล้อง</span></div>
-                            <div class="cctv-timestamp" id="cctvTimestamp"></div>
+                            <div class="cctv-timestamp cctv-host-only" id="cctvTimestamp"></div>
                             <div class="cctv-placeholder" id="cctvPlaceholder">กำลังเปิดกล้อง... กรุณาอนุญาตการเข้าถึงกล้องหากเบราว์เซอร์ถาม</div>
                         </div>
 
                         <div class="cctv-panels">
-                            <div class="cctv-card">
+                            <div class="cctv-card cctv-viewer-only">
+                                <h3>ดูกล้องจากเครื่องอื่น</h3>
+                                <div class="cctv-row">
+                                    <div><label for="cctvViewCode">รหัสดูกล้อง</label><span class="cctv-hint">ดูรหัสได้ที่เครื่องที่เสียบกล้อง (การ์ด "แชร์ให้มือถือดู")</span></div>
+                                    <input type="text" id="cctvViewCode" class="cctv-code-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="รหัส 8 ตัว">
+                                </div>
+                                <div class="cctv-btnrow">
+                                    <button type="button" class="cctv-primary" id="cctvViewConnect">เชื่อมต่อ</button>
+                                    <button type="button" id="cctvViewFull">⛶ เต็มจอ</button>
+                                </div>
+                                <div class="cctv-status-line">สถานะ: <strong id="cctvViewStatus">ยังไม่ได้เชื่อมต่อ</strong></div>
+                            </div>
+
+                            <div class="cctv-card cctv-host-only">
                                 <h3>การควบคุม</h3>
                                 <div class="cctv-btnrow">
                                     <button type="button" class="cctv-primary" id="cctvBtnStart">เปิดกล้อง</button>
@@ -409,13 +431,31 @@
                                     </select>
                                 </div>
 
+                                <details class="cctv-adjust">
+                                    <summary>🎛️ ปรับภาพ (แสง / สี) — ใช้เมื่อภาพสว่างจ้าหรือมืดเกินไป</summary>
+                                    <div id="cctvAdjust" class="cctv-adjust-body">เปิดกล้องก่อน</div>
+                                </details>
+
                                 <div class="cctv-status-line">
                                     สถานะ: <strong id="cctvStatusText">ปิดอยู่</strong><br>
-                                    โฟลเดอร์ปลายทาง: <span class="cctv-folder-path" id="cctvFolderPath">ยังไม่ได้เลือก</span>
+                                    โฟลเดอร์ปลายทาง: <span class="cctv-folder-path" id="cctvFolderPath">ยังไม่ได้เลือก</span><br>
+                                    กล้องส่งภาพจริง: <span class="cctv-folder-path" id="cctvActualInfo">-</span>
                                 </div>
                             </div>
 
-                            <div class="cctv-card">
+                            <div class="cctv-card cctv-host-only">
+                                <h3>📱 แชร์ให้มือถือดู</h3>
+                                <div class="cctv-row">
+                                    <div><label for="cctvShareCode">รหัสดูกล้อง</label><span class="cctv-hint">เปิดหน้านี้บนมือถือ เลือก "ดูกล้องจากเครื่องอื่น" แล้วใส่รหัสนี้</span></div>
+                                    <input type="text" id="cctvShareCode" class="cctv-code-input" readonly>
+                                </div>
+                                <div class="cctv-btnrow">
+                                    <button type="button" id="cctvShareNew">🔄 สร้างรหัสใหม่</button>
+                                </div>
+                                <div class="cctv-status-line">ผู้ที่กำลังดู: <strong id="cctvShareViewers">0</strong> เครื่อง</div>
+                            </div>
+
+                            <div class="cctv-card cctv-host-only">
                                 <h3>ประวัติการบันทึก</h3>
                                 <ul class="cctv-log" id="cctvLog"><li class="cctv-log-empty">ยังไม่มีคลิปที่บันทึก</li></ul>
                             </div>
@@ -554,10 +594,10 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-api.js?v=8"></script>
+<script src="js/supabase-api.js?v=9"></script>
 <script src="js/script.js?v=42"></script>
-<script src="js/cctv.js?v=7"></script>
-<script src="js/scanlog.js?v=4"></script>
+<script src="js/cctv.js?v=20"></script>
+<script src="js/scanlog.js?v=5"></script>
 
 </body>
 </html>-

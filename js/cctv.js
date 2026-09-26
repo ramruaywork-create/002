@@ -61,22 +61,79 @@
   sensitivityInput.addEventListener('input', saveSettings);
   cooldownSelect.addEventListener('change', saveSettings);
   camSelect.addEventListener('change', saveSettings);
+  // เปลี่ยนความละเอียด = ปิดกระแสเดิมแล้วเปิดใหม่ (การสลับสดๆ ทำให้ภาพเสียในกล้อง USB บางรุ่น)
+  // กล้องต้องใช้เวลาปล่อยตัวเองก่อน จึงรอแล้วลองซ้ำหลายรอบ ถ้าไม่ได้จริงๆ จะย้อนกลับค่าเดิมให้กล้องไม่ดับ
+  async function reopenCamera() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+    let lastErr;
+    for (const wait of [700, 1500, 3000]) {
+      await new Promise(r => setTimeout(r, wait));
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: getVideoConstraints(), audio: false });
+        video.srcObject = stream;
+        await video.play();
+        showActual();
+        await applyCameraAdjust();
+        buildAdjustPanel();
+        hostRefreshTracks();
+        const w = video.videoWidth || 640, h = video.videoHeight || 480;
+        overlay.width = w; overlay.height = h; recordCanvas.width = w; recordCanvas.height = h;
+        $('cctvMonitor').style.aspectRatio = w + ' / ' + h;
+        return;
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  }
+
+  // ยามเฝ้ากล้อง: ถ้าภาพนิ่งค้าง (กล้อง USB สะดุด/หลุด) เปิดกล้องใหม่ให้เองโดยไม่ต้องมีใครมากด
+  let recovering = false, lastRecoverAt = 0, lastCT = -1, lastCTChange = Date.now();
+  async function recoverCamera(reason) {
+    recovering = true; lastRecoverAt = Date.now();
+    statusText.textContent = 'ภาพค้าง (' + reason + ') — กำลังเปิดกล้องใหม่อัตโนมัติ...';
+    addLog(nowStamp() + ' · ภาพค้าง (' + reason + ') เปิดกล้องใหม่อัตโนมัติ');
+    try {
+      await reopenCamera();
+      statusText.textContent = isRecording ? 'ตรวจพบความเคลื่อนไหว — กำลังบันทึก' : 'เปิดกล้องแล้ว — กู้คืนอัตโนมัติเรียบร้อย';
+    } catch (e) {
+      statusText.textContent = 'กล้องค้างและเปิดใหม่ไม่สำเร็จ — จะลองอีกครั้งใน 10 วินาที';
+    } finally { recovering = false; lastCT = -1; lastCTChange = Date.now(); }
+  }
+  document.addEventListener('visibilitychange', () => { lastCT = -1; lastCTChange = Date.now(); });
+  setInterval(() => {
+    if (!stream || recovering || switchingRes) return;
+    if (Date.now() - lastRecoverAt < 10000) return;
+    const t = stream.getVideoTracks()[0];
+    if (!t || t.readyState === 'ended') return recoverCamera('กล้องหลุด');   // เช็กได้แม้แท็บอยู่เบื้องหลัง
+    if (document.hidden) return;   // แท็บซ่อนอยู่ เบราว์เซอร์อาจหยุดเดินภาพเอง จึงไม่ใช้เกณฑ์ภาพนิ่งตอนนี้
+    if (video.paused) video.play().catch(() => {});
+    const ct = video.currentTime;
+    if (ct !== lastCT) { lastCT = ct; lastCTChange = Date.now(); }
+    if (Date.now() - lastCTChange > 8000) recoverCamera('ไม่มีภาพใหม่ 8 วินาที');
+  }, 2000);
+
+  let lastGoodRes = resolutionSelect.value, switchingRes = false;
   resolutionSelect.addEventListener('change', async () => {
     saveSettings();
-    if (!stream) return;
+    if (!stream || switchingRes) return;
+    switchingRes = true;
+    const wanted = resolutionSelect.value;
+    statusText.textContent = 'กำลังเปลี่ยนความละเอียด...';
     try {
-      // ปิดกระแสเดิมแล้วเปิดใหม่ (การสลับความละเอียดสดๆ ทำให้ภาพเสียเป็นบล็อกเขียวในกล้อง USB บางรุ่น)
-      stream.getTracks().forEach(t => t.stop());
-      video.srcObject = null;
-      await new Promise(r => setTimeout(r, 400));
-      stream = await navigator.mediaDevices.getUserMedia({ video: getVideoConstraints(), audio: false });
-      video.srcObject = stream;
-      await video.play();
-      const w = video.videoWidth || 640, h = video.videoHeight || 480;
-      overlay.width = w; overlay.height = h; recordCanvas.width = w; recordCanvas.height = h;
-      $('cctvMonitor').style.aspectRatio = w + ' / ' + h;
+      await reopenCamera();
+      lastGoodRes = wanted;
       statusText.textContent = 'เปิดกล้องแล้ว — เปลี่ยนความละเอียดเรียบร้อย';
-    } catch (err) { notify('เปลี่ยนความละเอียดไม่สำเร็จ: ' + err.message); }
+    } catch (err) {
+      resolutionSelect.value = lastGoodRes; saveSettings();
+      try {
+        await reopenCamera();
+        statusText.textContent = 'เปิดกล้องแล้ว — กลับไปใช้ความละเอียดเดิม';
+        notify('เปลี่ยนเป็น ' + wanted.replace('x', ' x ') + ' ไม่สำเร็จ (' + err.message + ')\nกลับไปใช้ความละเอียดเดิมให้แล้ว\nถ้าเปลี่ยนไม่ได้ซ้ำๆ ให้ปิดโปรแกรมอื่นที่ใช้กล้อง หรือลองเสียบสาย USB ใหม่');
+      } catch (err2) {
+        statusText.textContent = 'กล้องไม่ตอบสนอง';
+        notify('กล้องไม่ตอบสนอง: ' + err2.message + '\nลองกด "ปิดกล้อง" แล้ว "เปิดกล้อง" ใหม่ หรือถอดแล้วเสียบสาย USB ของกล้องใหม่');
+      }
+    } finally { switchingRes = false; }
   });
 
   (function applySavedBasicSettings() {
@@ -156,20 +213,103 @@
     } catch (e) {}
   }
 
+  // ปรับภาพ (แสง/สี): ใช้ค่าที่กล้องเปิดให้เบราว์เซอร์ปรับได้ (แต่ละรุ่นไม่เท่ากัน) และจำค่าไว้
+  const ADJUST_KEY = 'cctv-adjust';
+  const ADJUST_ITEMS = [['exposureCompensation', 'ชดเชยแสง'], ['brightness', 'ความสว่าง'], ['contrast', 'คอนทราสต์'], ['saturation', 'ความอิ่มสี']];
+  const loadAdjust = () => { try { return JSON.parse(localStorage.getItem(ADJUST_KEY) || '{}'); } catch (e) { return {}; } };
+  const saveAdjust = v => { try { localStorage.setItem(ADJUST_KEY, JSON.stringify(v)); } catch (e) {} };
+
+  async function applyCameraAdjust() {
+    const t = stream && stream.getVideoTracks()[0];
+    if (!t || !t.getCapabilities) return;
+    const caps = t.getCapabilities();
+    const adv = {};
+    // บังคับให้ระบบแสง/สมดุลสีอัตโนมัติทำงานต่อเนื่อง (แก้อาการแสงค้างจ้าหลังเปลี่ยนความละเอียด)
+    if (caps.exposureMode && caps.exposureMode.includes('continuous')) adv.exposureMode = 'continuous';
+    if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('continuous')) adv.whiteBalanceMode = 'continuous';
+    const saved = loadAdjust();
+    ADJUST_ITEMS.forEach(([k]) => { if (caps[k] && saved[k] !== undefined) adv[k] = saved[k]; });
+    if (Object.keys(adv).length) { try { await t.applyConstraints({ advanced: [adv] }); } catch (e) {} }
+  }
+
+  function buildAdjustPanel() {
+    const box = $('cctvAdjust');
+    if (!box) return;
+    const t = stream && stream.getVideoTracks()[0];
+    if (!t || !t.getCapabilities) { box.textContent = 'เปิดกล้องก่อน'; return; }
+    const caps = t.getCapabilities(), settings = t.getSettings(), saved = loadAdjust();
+    box.innerHTML = '';
+    const btns = document.createElement('div'); btns.className = 'cctv-btnrow';
+    const auto = document.createElement('button'); auto.type = 'button'; auto.textContent = '☀️ รีเซ็ตเป็นแสงอัตโนมัติ';
+    auto.addEventListener('click', async () => { saveAdjust({}); await applyCameraAdjust(); buildAdjustPanel(); });
+    btns.appendChild(auto); box.appendChild(btns);
+    let n = 0;
+    ADJUST_ITEMS.forEach(([k, label]) => {
+      const c = caps[k];
+      if (!c || c.min === undefined || c.max === undefined) return;
+      n++;
+      const row = document.createElement('div'); row.className = 'cctv-adjust-row';
+      const lb = document.createElement('label'); lb.textContent = label;
+      const inp = document.createElement('input'); inp.type = 'range'; inp.min = c.min; inp.max = c.max; inp.step = c.step || (c.max - c.min) / 100;
+      inp.value = saved[k] !== undefined ? saved[k] : (settings[k] !== undefined ? settings[k] : c.min);
+      inp.addEventListener('input', () => {
+        const s = loadAdjust(); s[k] = Number(inp.value); saveAdjust(s);
+        t.applyConstraints({ advanced: [{ [k]: Number(inp.value) }] }).catch(() => {});
+      });
+      row.appendChild(lb); row.appendChild(inp); box.appendChild(row);
+    });
+    if (!n) { const note = document.createElement('div'); note.textContent = 'กล้องรุ่นนี้ไม่เปิดให้ปรับแสงผ่านเบราว์เซอร์ — ปุ่มด้านบนยังใช้บังคับแสงอัตโนมัติได้'; box.appendChild(note); }
+  }
+
+  // แสดงค่าที่กล้องส่งมาจริง (ขนาด/เฟรมเรต) ไว้เทียบกับที่เลือก
+  function showActual() {
+    const el = $('cctvActualInfo');
+    const t = stream && stream.getVideoTracks()[0];
+    if (!el) return;
+    if (!t) { el.textContent = '-'; return; }
+    const s = t.getSettings();
+    el.textContent = `${s.width}x${s.height} @ ${Math.round(s.frameRate || 0)} fps`;
+  }
+
   function getVideoConstraints() {
     const [width, height] = resolutionSelect.value.split('x').map(Number);
     const deviceId = camSelect.value && camSelect.options.length > 1 ? { exact: camSelect.value } : undefined;
-    const frameRate = { ideal: 30, max: 30 };   // ล็อก 30 fps กันภาพกระพริบตอนความละเอียดสูง
+    // ความละเอียดสูงกล้อง USB ส่งข้อมูลเยอะมาก (สาย/พอร์ต USB2 ไม่พอ ภาพจะขาดเป็นแถบหรือสีเพี้ยน)
+    // จึงลดเหลือ 15 fps ตั้งแต่ Full HD ขึ้นไป — กล้องวงจรปิดใช้ 15 fps ก็เพียงพอ
+    const frameRate = height >= 1080 ? { ideal: 15, max: 15 } : { ideal: 30, max: 30 };
     if (!width || !height) return deviceId ? { deviceId, frameRate } : { frameRate };
     return deviceId ? { deviceId, width: { ideal: width }, height: { ideal: height }, frameRate } : { width: { ideal: width }, height: { ideal: height }, frameRate };
   }
 
   async function startCamera() {
+    // กล้อง USB (โดยเฉพาะ Full HD/2K) ใช้เวลาเปิดหลายวินาที แสดงตัวนับให้รู้ว่ายังทำงานอยู่
+    const t0 = Date.now();
+    placeholder.style.display = 'flex';
+    const showWait = () => { placeholder.textContent = `กำลังเปิดกล้อง... ${Math.round((Date.now() - t0) / 1000)} วินาที (ความละเอียดสูงเปิดช้ากว่า)`; };
+    showWait();
+    const waitTimer = setInterval(showWait, 500);
+    btnStart.disabled = true;
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('เบราว์เซอร์นี้ไม่รองรับกล้อง (ต้องเปิดผ่าน https หรือ localhost)');
-      stream = await navigator.mediaDevices.getUserMedia({ video: getVideoConstraints(), audio: false });
+      // ลองเปิดด้วยค่าที่เลือกก่อน ถ้ากล้องไม่ตอบ (Timeout starting video source) รอแล้วลองค่าพื้นฐานที่เบาที่สุด
+      const full = getVideoConstraints(), lowRes = { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } };
+      let usedFallback = false, lastErr;
+      for (const [i, c] of [full, full, lowRes].entries()) {
+        try {
+          if (i > 0) await new Promise(r => setTimeout(r, 1500));
+          stream = await navigator.mediaDevices.getUserMedia({ video: c, audio: false });
+          usedFallback = (i === 2);
+          break;
+        } catch (e) { lastErr = e; stream = null; }
+      }
+      if (!stream) throw lastErr;
       video.srcObject = stream;
       await video.play();
+      clearInterval(waitTimer);
+      placeholder.style.display = 'none';   // โชว์ภาพก่อน ค่อยปรับแสงตามหลัง ไม่ต้องรอ
+      showActual();
+      applyCameraAdjust().then(buildAdjustPanel);
+      if (usedFallback) notify('กล้องเปิดไม่ได้ที่ความละเอียดที่เลือก จึงเปิดด้วยค่าพื้นฐาน 640 x 480 แทน\nลองเลือกความละเอียดต่ำลง (เช่น 1280 x 720) หรือเสียบกล้องพอร์ต USB 3.0 ตรงที่ตัวเครื่อง');
       placeholder.style.display = 'none';
       const w = video.videoWidth || 640, h = video.videoHeight || 480;
       overlay.width = w; overlay.height = h; recordCanvas.width = w; recordCanvas.height = h;
@@ -183,10 +323,18 @@
       startRenderLoop();
       renderStream = recordCanvas.captureStream(30);
       try { localStorage.setItem(ACTIVE_KEY, 'true'); } catch (e) {}
+      hostStart();
+      if (dirHandle) armMotionDetection();   // เลือกโฟลเดอร์ไว้ก่อนเปิดกล้อง → เริ่มเฝ้าระวังทันที
     } catch (err) {
+      clearInterval(waitTimer);
+      btnStart.disabled = false;
+      placeholder.style.display = 'flex';
       placeholder.textContent = 'เปิดกล้องไม่สำเร็จ — กดปุ่ม "เปิดกล้อง" เพื่อลองใหม่';
       statusText.textContent = 'ปิดอยู่';
-      notify('เปิดกล้องไม่สำเร็จ: ' + err.message + '\nกรุณาอนุญาตการเข้าถึงกล้องในเบราว์เซอร์');
+      const busy = /Timeout starting video source|NotReadable|Could not start video/i.test((err.name || '') + ' ' + err.message);
+      notify('เปิดกล้องไม่สำเร็จ: ' + err.message + '\n' + (busy
+        ? 'กล้องอาจถูกโปรแกรมอื่นใช้อยู่ หรือยังไม่พร้อม:\n• ปิดหน้า Settings > Cameras ของ Windows, โปรแกรม EMEET และแอปประชุม/แท็บอื่นที่ใช้กล้อง\n• ถอดสาย USB ของกล้องแล้วเสียบใหม่ (พอร์ต USB 3.0 ตรงที่ตัวเครื่อง) รอ 5 วินาทีแล้วกด "เปิดกล้อง"'
+        : 'กรุณาอนุญาตการเข้าถึงกล้องในเบราว์เซอร์'));
     }
   }
 
@@ -251,6 +399,7 @@
   });
 
   function armMotionDetection() {
+    if (!stream) { statusText.textContent = 'เลือกโฟลเดอร์แล้ว — กรุณาเปิดกล้อง'; return; }   // กล้องยังปิดอยู่ จะเริ่มเฝ้าระวังตอนเปิดกล้อง
     setHud('armed');
     statusText.textContent = 'กำลังเฝ้าระวังความเคลื่อนไหว';
     if (motionLoopId) clearInterval(motionLoopId);
@@ -333,6 +482,7 @@
   }
 
   function stopEverything() {
+    hostStop();
     if (motionLoopId) clearInterval(motionLoopId);
     if (clockId) clearInterval(clockId);
     if (isRecording) stopRecording();
@@ -344,6 +494,8 @@
     placeholder.textContent = 'ปิดกล้องอยู่ — กดปุ่ม "เปิดกล้อง" เพื่อเริ่มใหม่';
     setHud('off');
     statusText.textContent = 'ปิดอยู่';
+    showActual();
+    buildAdjustPanel();
     timestampEl.textContent = '';
     btnStart.disabled = false; btnStop.disabled = true;
     dirHandle = null;
@@ -415,25 +567,40 @@
     return [new Date(y, mo - 1, da, fh, fm, 0).getTime(), new Date(y, mo - 1, da, th, tm, 59).getTime()];
   }
 
+  async function scanDir(dir, ws, we) {
+    const clips = [];
+    for await (const [name, handle] of dir.entries()) {
+      if (handle.kind !== 'file') continue;
+      const start = parseName(name);
+      if (start === null) continue;
+      const file = await handle.getFile();
+      const end = Math.max(file.lastModified, start + 1000);
+      if (end < ws || start > we) continue;
+      clips.push({ name, handle, start, end, size: file.size });
+    }
+    return clips;
+  }
+
   async function loadPlayback() {
     if (!pbDate.value) { notify('กรุณาเลือกวันที่'); return; }
-    const dir = await getPlaybackDir();
-    if (!dir) return;
-    [pbWinStart, pbWinEnd] = windowRange();
-    if (pbWinEnd <= pbWinStart) { notify('เวลา "ถึง" ต้องมากกว่า "ตั้งแต่"'); return; }
-    pbInfo.textContent = 'กำลังอ่านโฟลเดอร์...';
-    const clips = [];
+    const isViewer = role === 'viewer';
+    const dir = isViewer ? null : await getPlaybackDir();
+    if (!isViewer && !dir) return;
+    const [ws, we] = windowRange();
+    if (we <= ws) { notify('เวลา "ถึง" ต้องมากกว่า "ตั้งแต่"'); return; }
+    pbWinStart = ws; pbWinEnd = we;
+    let clips = [];
     try {
-      for await (const [name, handle] of dir.entries()) {
-        if (handle.kind !== 'file') continue;
-        const start = parseName(name);
-        if (start === null) continue;
-        const file = await handle.getFile();
-        const end = Math.max(file.lastModified, start + 1000);
-        if (end < pbWinStart || start > pbWinEnd) continue;
-        clips.push({ name, handle, start, end, size: file.size });
+      if (isViewer) {
+        // มือถือ/เครื่องที่ดู: ขอรายการและตัวคลิปจากเครื่องหลักผ่านการเชื่อมต่อ (คลิปเก็บอยู่ที่เครื่องหลัก)
+        pbInfo.textContent = 'กำลังขอรายการคลิปจากเครื่องหลัก...';
+        const list = await dcRequest({ t: 'list', from: ws, to: we });
+        clips = list.map(c => ({ ...c, handle: { getFile: () => dcRequest({ t: 'get', name: c.name }, pct => { pbInfo.textContent = `กำลังโหลดคลิป ${pct}%`; }) } }));
+      } else {
+        pbInfo.textContent = 'กำลังอ่านโฟลเดอร์...';
+        clips = await scanDir(dir, ws, we);
       }
-    } catch (e) { pbInfo.textContent = 'อ่านโฟลเดอร์ไม่สำเร็จ: ' + e.message; return; }
+    } catch (e) { pbInfo.textContent = (isViewer ? 'ขอคลิปไม่สำเร็จ: ' : 'อ่านโฟลเดอร์ไม่สำเร็จ: ') + e.message; return; }
     clips.sort((a, b) => a.start - b.start);
     pbClips = clips; pbIndex = -1;
     pbInfo.textContent = clips.length ? `พบ ${clips.length} คลิป · คลิกที่ไทม์ไลน์หรือรายการเพื่อดู` : 'ไม่พบคลิปในช่วงเวลานี้';
@@ -551,7 +718,7 @@
     tabLive.classList.toggle('active', !pb); tabPb.classList.toggle('active', pb);
     if (!pb) pbVideo.pause();
     // โหลดให้อัตโนมัติเฉพาะตอนที่เชื่อมต่อโฟลเดอร์ไว้แล้ว (ไม่งั้นต้องให้ผู้ใช้กดค้นหาเอง เพราะเบราว์เซอร์ต้องการการคลิกก่อนเปิดตัวเลือกโฟลเดอร์)
-    if (pb && !pbAutoLoaded && (dirHandle || pbDir)) { pbAutoLoaded = true; loadPlayback(); }
+    if (pb && !pbAutoLoaded && (role === 'viewer' ? (viewDc && viewDc.readyState === 'open') : (dirHandle || pbDir))) { pbAutoLoaded = true; loadPlayback(); }
   }
   tabLive.addEventListener('click', () => showTab('live'));
   tabPb.addEventListener('click', () => showTab('pb'));
@@ -576,9 +743,283 @@
   $('cctvPbPrev').addEventListener('click', () => playClip(pbIndex - 1));
   $('cctvPbNext').addEventListener('click', () => playClip(pbIndex + 1));
 
+  // ==========================================================
+  //  ดูกล้องข้ามเครื่อง (WebRTC): เครื่องที่เสียบกล้อง (host) ส่งภาพสดให้มือถือ (viewer) ผ่านห้องรหัสลับ
+  //  ใช้ Supabase Realtime แค่ส่งสัญญาณเชื่อมต่อ ตัวภาพวิ่งตรงระหว่างสองเครื่อง ไม่ผ่านเซิร์ฟเวอร์
+  // ==========================================================
+  const ROOM_KEY = 'cctv-room-code', ROLE_KEY = 'cctv-role', VIEW_CODE_KEY = 'cctv-view-code';
+  const RTC_CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+  const MAX_VIEWERS = 4;
+  const genCode = () => {
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    let s = '';
+    crypto.getRandomValues(new Uint8Array(8)).forEach(v => { s += chars[v % chars.length]; });
+    return s;
+  };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const realtimeOk = () => typeof sbClient !== 'undefined' && sbClient && typeof RTCPeerConnection !== 'undefined';
+
+  const remoteVideo = $('cctvRemote');
+  const shareCodeEl = $('cctvShareCode'), shareViewersEl = $('cctvShareViewers');
+  const viewCodeEl = $('cctvViewCode'), viewStatusEl = $('cctvViewStatus');
+  const roleHostBtn = $('cctvRoleHost'), roleViewBtn = $('cctvRoleView');
+  const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  let role = lsGet(ROLE_KEY) || (isMobileUA ? 'viewer' : 'host');
+  let roomCode = lsGet(ROOM_KEY);
+  if (!roomCode) { roomCode = genCode(); lsSet(ROOM_KEY, roomCode); }
+  shareCodeEl.value = roomCode;
+
+  // ---- ฝั่งเครื่องที่เสียบกล้อง ----
+  let hostChan = null;
+  const hostPeers = new Map();   // viewerId -> RTCPeerConnection
+
+  function hostSend(payload) { if (hostChan) hostChan.send({ type: 'broadcast', event: 'sig', payload }); }
+  function updateViewerCount() {
+    let n = 0; hostPeers.forEach(pc => { if (pc.connectionState === 'connected') n++; });
+    shareViewersEl.textContent = n;
+  }
+  function closeHostPeer(id) {
+    const pc = hostPeers.get(id);
+    if (pc) { try { pc.close(); } catch (e) {} hostPeers.delete(id); }
+    updateViewerCount();
+  }
+  function hostStart() {
+    hostStop();
+    if (!realtimeOk()) return;
+    hostChan = sbClient.channel('cctv-live-' + roomCode, { config: { broadcast: { self: false } } });
+    hostChan.on('broadcast', { event: 'sig' }, ({ payload }) => onHostSignal(payload)).subscribe();
+  }
+  function hostStop() {
+    hostPeers.forEach((pc, id) => closeHostPeer(id));
+    if (hostChan) { try { sbClient.removeChannel(hostChan); } catch (e) {} hostChan = null; }
+    updateViewerCount();
+  }
+  async function onHostSignal(m) {
+    if (!m) return;
+    try {
+      if (m.type === 'join') return hostOffer(m.id);
+      if (m.to !== 'host') return;
+      const pc = hostPeers.get(m.from);
+      if (!pc) return;
+      if (m.type === 'answer') {
+        await pc.setRemoteDescription(m.sdp);
+        for (const c of pc._q) await pc.addIceCandidate(c).catch(() => {});
+        pc._q = [];
+      } else if (m.type === 'ice') {
+        if (pc.remoteDescription) await pc.addIceCandidate(m.cand).catch(() => {});
+        else pc._q.push(m.cand);
+      } else if (m.type === 'bye') closeHostPeer(m.from);
+    } catch (e) {}
+  }
+  async function hostOffer(id) {
+    if (!stream) return;
+    closeHostPeer(id);
+    if (hostPeers.size >= MAX_VIEWERS) return;
+    const pc = new RTCPeerConnection(RTC_CFG);
+    pc._q = [];
+    hostPeers.set(id, pc);
+    stream.getVideoTracks().forEach(t => pc.addTrack(t, stream));
+    // ช่องส่งไฟล์: ให้ผู้ดูขอรายการ/ตัวคลิปย้อนหลังจากโฟลเดอร์ที่เครื่องหลักได้
+    const dc = pc.createDataChannel('files');
+    dc.binaryType = 'arraybuffer';
+    dc._chain = Promise.resolve();
+    dc.onmessage = e => {
+      let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+      dc._chain = dc._chain.then(() => hostHandleFileMsg(dc, m)).catch(() => {});
+    };
+    pc.onicecandidate = e => { if (e.candidate) hostSend({ type: 'ice', to: id, from: 'host', cand: e.candidate.toJSON() }); };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') closeHostPeer(id);
+      updateViewerCount();
+    };
+    try {
+      // จำกัดบิตเรตและขนาดภาพที่ส่งให้มือถือ (ต้นทาง 2K ก็ส่งลดขนาดให้ลื่นบนเน็ตมือถือ)
+      const sender = pc.getSenders()[0];
+      if (sender) {
+        const p = sender.getParameters();
+        if (!p.encodings || !p.encodings.length) p.encodings = [{}];
+        p.encodings[0].maxBitrate = 2000000;
+        p.encodings[0].scaleResolutionDownBy = Math.max(1, (video.videoWidth || 1280) / 1280);
+        await sender.setParameters(p).catch(() => {});
+      }
+      await pc.setLocalDescription(await pc.createOffer());
+      hostSend({ type: 'offer', to: id, from: 'host', sdp: pc.localDescription });
+    } catch (e) { closeHostPeer(id); }
+  }
+  async function hostHandleFileMsg(dc, m) {
+    const reply = o => { if (dc.readyState === 'open') dc.send(JSON.stringify(o)); };
+    if (!dirHandle) return reply({ t: 'err', id: m.id, msg: 'เครื่องหลักยังไม่ได้เชื่อมต่อโฟลเดอร์บันทึก (กดปุ่มโฟลเดอร์ที่เครื่องหลักก่อน)' });
+    try {
+      if (m.t === 'list') {
+        const clips = await scanDir(dirHandle, Number(m.from), Number(m.to));
+        return reply({ t: 'list', id: m.id, clips: clips.map(c => ({ name: c.name, start: c.start, end: c.end, size: c.size })) });
+      }
+      if (m.t === 'get') {
+        if (parseName(String(m.name)) === null) return reply({ t: 'err', id: m.id, msg: 'ชื่อไฟล์ไม่ถูกต้อง' });   // รับเฉพาะชื่อคลิปที่เครื่องนี้สร้างเอง
+        const file = await (await dirHandle.getFileHandle(m.name)).getFile();
+        reply({ t: 'file', id: m.id, size: file.size });
+        const CHUNK = 16384;
+        dc.bufferedAmountLowThreshold = 256 * 1024;
+        for (let off = 0; off < file.size; off += CHUNK) {
+          if (dc.readyState !== 'open') return;
+          if (dc.bufferedAmount > 1024 * 1024) await new Promise(r => { dc.onbufferedamountlow = () => { dc.onbufferedamountlow = null; r(); }; });
+          dc.send(await file.slice(off, off + CHUNK).arrayBuffer());
+        }
+        reply({ t: 'end', id: m.id });
+      }
+    } catch (e) { reply({ t: 'err', id: m.id, msg: e.message }); }
+  }
+
+  // เปลี่ยนความละเอียดแล้วกล้องเป็นกระแสใหม่ → สลับแทร็กที่ส่งให้ผู้ดูทุกคน
+  function hostRefreshTracks() {
+    const track = stream && stream.getVideoTracks()[0];
+    if (!track) return;
+    hostPeers.forEach(pc => { const s = pc.getSenders()[0]; if (s) s.replaceTrack(track).catch(() => {}); });
+  }
+
+  $('cctvShareNew').addEventListener('click', () => {
+    roomCode = genCode(); lsSet(ROOM_KEY, roomCode); shareCodeEl.value = roomCode;
+    if (stream) hostStart();      // ผู้ดูรหัสเก่าจะหลุดทันที
+  });
+  shareCodeEl.addEventListener('focus', () => shareCodeEl.select());
+
+  // ---- ฝั่งมือถือ/เครื่องที่ดู ----
+  let viewChan = null, viewPc = null, viewId = null, viewTimer = null, viewQ = [];
+  const setViewStatus = t => {
+    viewStatusEl.textContent = t;
+    hudText.textContent = t === 'กำลังดูกล้องสด' ? 'ดูสดจากกล้องอีกเครื่อง' : 'ยังไม่ได้เชื่อมต่อกล้อง';
+  };
+
+  // ช่องขอไฟล์จากเครื่องหลัก: ส่งคำขอทีละรายการ ตอบกลับด้วย id เดียวกัน
+  let viewDc = null, dcSeq = 0, dcCurrent = 0;
+  const dcPending = new Map();
+  function dcRequest(msg, onProgress) {
+    return new Promise((resolve, reject) => {
+      if (!viewDc || viewDc.readyState !== 'open') return reject(new Error('ยังไม่ได้เชื่อมต่อกับเครื่องหลัก (ไปแท็บกล้องสดแล้วกดเชื่อมต่อก่อน)'));
+      const id = ++dcSeq;
+      const timer = setTimeout(() => { dcPending.delete(id); reject(new Error('หมดเวลารอเครื่องหลักตอบ')); }, 180000);
+      dcPending.set(id, { chunks: [], size: 0, got: 0, onProgress,
+        resolve: v => { clearTimeout(timer); resolve(v); }, reject: e => { clearTimeout(timer); reject(e); } });
+      viewDc.send(JSON.stringify({ ...msg, id }));
+    });
+  }
+  function onViewerDcMsg(data) {
+    if (typeof data === 'string') {
+      let m; try { m = JSON.parse(data); } catch (e) { return; }
+      const p = dcPending.get(m.id);
+      if (!p) return;
+      if (m.t === 'list') { dcPending.delete(m.id); p.resolve(m.clips); }
+      else if (m.t === 'err') { dcPending.delete(m.id); p.reject(new Error(m.msg)); }
+      else if (m.t === 'file') { p.size = m.size; dcCurrent = m.id; }
+      else if (m.t === 'end') { dcPending.delete(m.id); p.resolve(new Blob(p.chunks, { type: 'video/webm' })); }
+    } else {
+      const p = dcPending.get(dcCurrent);
+      if (!p) return;
+      p.chunks.push(data); p.got += data.byteLength;
+      if (p.onProgress && p.size) p.onProgress(Math.min(100, Math.round(p.got / p.size * 100)));
+    }
+  }
+
+  function viewerStop() {
+    dcPending.forEach(p => p.reject(new Error('การเชื่อมต่อถูกปิด'))); dcPending.clear(); viewDc = null;
+    clearInterval(viewTimer); viewTimer = null;
+    if (viewChan) { try { viewChan.send({ type: 'broadcast', event: 'sig', payload: { type: 'bye', to: 'host', from: viewId } }); } catch (e) {} try { sbClient.removeChannel(viewChan); } catch (e) {} viewChan = null; }
+    if (viewPc) { try { viewPc.close(); } catch (e) {} viewPc = null; }
+    remoteVideo.srcObject = null;
+  }
+  function viewerConnect() {
+    const code = viewCodeEl.value.trim().toLowerCase();
+    if (!code) { notify('กรุณาใส่รหัสดูกล้อง'); return; }
+    if (!realtimeOk()) { notify('เบราว์เซอร์นี้ไม่รองรับการดูกล้อง (WebRTC)'); return; }
+    lsSet(VIEW_CODE_KEY, code);
+    viewerStop();
+    viewId = genCode();
+    placeholder.style.display = 'flex'; placeholder.textContent = 'กำลังเชื่อมต่อกล้อง...';
+    setViewStatus('กำลังเชื่อมต่อ...');
+    viewChan = sbClient.channel('cctv-live-' + code, { config: { broadcast: { self: false } } });
+    viewChan.on('broadcast', { event: 'sig' }, ({ payload }) => onViewerSignal(payload));
+    viewChan.subscribe(status => {
+      if (status !== 'SUBSCRIBED') return;
+      const sendJoin = () => {
+        if (viewPc && viewPc.connectionState === 'connected') return;
+        viewChan && viewChan.send({ type: 'broadcast', event: 'sig', payload: { type: 'join', id: viewId } });
+      };
+      sendJoin();
+      clearInterval(viewTimer);
+      viewTimer = setInterval(() => {
+        if (viewPc && viewPc.connectionState === 'connected') return;
+        setViewStatus('ยังไม่พบกล้อง — ตรวจว่าเครื่องที่เสียบกล้องเปิดกล้องอยู่ และรหัสถูกต้อง');
+        sendJoin();
+      }, 6000);
+    });
+  }
+  async function onViewerSignal(m) {
+    if (!m || m.to !== viewId) return;
+    try {
+      if (m.type === 'offer') {
+        if (viewPc) { try { viewPc.close(); } catch (e) {} }
+        viewQ = [];
+        const pc = viewPc = new RTCPeerConnection(RTC_CFG);
+        pc.ondatachannel = e => { viewDc = e.channel; viewDc.binaryType = 'arraybuffer'; viewDc.onmessage = ev => onViewerDcMsg(ev.data); };
+        pc.ontrack = e => {
+          remoteVideo.srcObject = e.streams[0] || new MediaStream([e.track]);
+          remoteVideo.play().catch(() => {});
+          placeholder.style.display = 'none';
+        };
+        pc.onicecandidate = e => { if (e.candidate && viewChan) viewChan.send({ type: 'broadcast', event: 'sig', payload: { type: 'ice', to: 'host', from: viewId, cand: e.candidate.toJSON() } }); };
+        pc.onconnectionstatechange = () => {
+          if (pc !== viewPc) return;
+          if (pc.connectionState === 'connected') setViewStatus('กำลังดูกล้องสด');
+          else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+            setViewStatus('การเชื่อมต่อหลุด กำลังลองใหม่...');
+            placeholder.style.display = 'flex'; placeholder.textContent = 'การเชื่อมต่อหลุด กำลังลองใหม่...';
+          }
+        };
+        await pc.setRemoteDescription(m.sdp);
+        for (const c of viewQ) await pc.addIceCandidate(c).catch(() => {});
+        viewQ = [];
+        await pc.setLocalDescription(await pc.createAnswer());
+        viewChan.send({ type: 'broadcast', event: 'sig', payload: { type: 'answer', to: 'host', from: viewId, sdp: pc.localDescription } });
+      } else if (m.type === 'ice' && viewPc) {
+        if (viewPc.remoteDescription) await viewPc.addIceCandidate(m.cand).catch(() => {});
+        else viewQ.push(m.cand);
+      }
+    } catch (e) { setViewStatus('เชื่อมต่อไม่สำเร็จ: ' + e.message); }
+  }
+  $('cctvViewConnect').addEventListener('click', viewerConnect);
+  viewCodeEl.addEventListener('keydown', e => { if (e.key === 'Enter') viewerConnect(); });
+  $('cctvViewFull').addEventListener('click', () => {
+    const el = $('cctvMonitor');
+    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+  });
+
+  // ---- สลับบทบาทของเครื่องนี้ ----
+  function applyRole(r, fromUser) {
+    role = r; lsSet(ROLE_KEY, r);
+    liveView.dataset.role = r;
+    roleHostBtn.classList.toggle('active', r === 'host');
+    roleViewBtn.classList.toggle('active', r === 'viewer');
+    if (r === 'viewer') {
+      showTab('live');
+      if (stream) { stopEverything(); lsSet(ACTIVE_KEY, 'true'); }   // ปิดกล้องเครื่องนี้ แต่จำไว้ว่ากลับไปโหมดกล้องแล้วเปิดใหม่ได้
+      placeholder.style.display = 'flex'; placeholder.textContent = 'ใส่รหัสดูกล้องแล้วกด "เชื่อมต่อ"';
+      viewCodeEl.value = lsGet(VIEW_CODE_KEY) || '';
+      if (fromUser && viewCodeEl.value) viewerConnect();
+    } else {
+      viewerStop();
+      setViewStatus('ยังไม่ได้เชื่อมต่อ');
+      if (fromUser && !stream) { placeholder.textContent = 'กำลังเปิดกล้อง...'; autoStart(); }
+    }
+  }
+  roleHostBtn.addEventListener('click', () => { if (role !== 'host') applyRole('host', true); });
+  roleViewBtn.addEventListener('click', () => { if (role !== 'viewer') applyRole('viewer', true); });
+  applyRole(role, false);
+
   window.cctvOnPageShow = function () {
     if (started) return;
     started = true;
-    autoStart();
+    if (role === 'viewer') { if (viewCodeEl.value) viewerConnect(); }
+    else autoStart();
   };
 })();

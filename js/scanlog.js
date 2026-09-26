@@ -139,7 +139,26 @@
 
     const result = await apiGet('getScanLog', params);
     // ประเภทประเมินใหม่จากข้อมูลออเดอร์ล่าสุดทุกครั้ง (โปรแกรมเบื้องหลังไม่รู้จักออเดอร์ จึงบันทึกเป็น "scanned")
-    const rows = (result.rows || []).map(r => ({ ...r, kind: detectKind(r.code) }));
+    const allRows = (result.rows || []).map(r => ({ ...r, kind: detectKind(r.code), machine: r.machine || (r.page && r.page.startsWith('app:') ? 'ไม่ระบุชื่อ (โปรแกรมรุ่นเก่า)' : null) }));
+
+    // ตัวกรองชื่อเครื่อง: รวบรวมชื่อเครื่องที่พบในวันนั้น (แถวที่ไม่มีชื่อ = ยิงในหน้าเว็บ)
+    const machSel = document.getElementById('scanLogMachine');
+    const WEB = '__web__';
+    if (machSel) {
+      const names = [...new Set(allRows.filter(r => r.machine).map(r => r.machine))].sort();
+      const hasWeb = allRows.some(r => !r.machine);
+      const wanted = ['', ...names, ...(hasWeb ? [WEB] : [])];
+      const have = [...machSel.options].map(o => o.value);
+      if (wanted.join('|') !== have.join('|')) {
+        const keep = machSel.value;
+        machSel.innerHTML = '<option value="">🖥️ ทุกเครื่อง</option>' +
+          names.map(n => `<option value="${escapeHtml(n)}">🖥️ ${escapeHtml(n)}</option>`).join('') +
+          (hasWeb ? `<option value="${WEB}">🌐 เว็บเบราว์เซอร์</option>` : '');
+        machSel.value = wanted.includes(keep) ? keep : '';
+      }
+    }
+    const machFilter = machSel ? machSel.value : '';
+    const rows = machFilter ? allRows.filter(r => machFilter === WEB ? !r.machine : r.machine === machFilter) : allRows;
     const count = k => rows.filter(r => r.kind === k).length;
     const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     setText('scanLogTotal', rows.length);
@@ -148,11 +167,11 @@
     setText('scanLogUnknown', count('unknown'));
 
     if (!result.success) {
-      tbody.innerHTML = `<tr><td colspan="4" class="text-center" style="padding:20px; color:#c41f42;">โหลดไม่สำเร็จ: ${escapeHtml(result.message || '')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:20px; color:#c41f42;">โหลดไม่สำเร็จ: ${escapeHtml(result.message || '')}</td></tr>`;
       return;
     }
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:20px; color:#6c757d;">ยังไม่มีการยิงในวันที่เลือก</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:20px; color:#6c757d;">ยังไม่มีการยิงในวันที่เลือก</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(r => `
@@ -160,6 +179,7 @@
         <td class="text-center" style="font-size:12px; color:#666;">${escapeHtml(r.time)}</td>
         <td><b>${escapeHtml(r.code)}</b></td>
         <td class="text-center">${KIND_LABEL[r.kind] || KIND_LABEL.unknown}</td>
+        <td>${r.machine ? '🖥️ ' + escapeHtml(r.machine) : '<span style="color:#8898aa;">🌐 เว็บเบราว์เซอร์</span>'}</td>
         <td>${escapeHtml(pageLabel(r.page))}</td>
       </tr>`).join('');
   };

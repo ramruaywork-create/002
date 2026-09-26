@@ -712,7 +712,7 @@ async function sbLogScans(rows) {
 async function sbGetScanLog(params) {
     try {
         const p = params || {};
-        let query = sbClient.from('scan_log').select('id, code, kind, page, input_id, created_at').order('created_at', { ascending: false });
+        let query = sbClient.from('scan_log').select('id, code, kind, page, input_id, machine, created_at').order('created_at', { ascending: false });
         if (p.fromISO) query = query.gte('created_at', p.fromISO);
         if (p.toISO) query = query.lt('created_at', p.toISO);
         if (p.q) query = query.ilike('code', '%' + String(p.q).replace(/[%_]/g, '') + '%');
@@ -720,7 +720,7 @@ async function sbGetScanLog(params) {
         if (error) throw error;
         return {
             success: true,
-            rows: (data || []).map(r => ({ id: r.id, code: r.code, kind: r.kind, page: r.page, inputId: r.input_id, time: sbFormatBangkok(r.created_at) }))
+            rows: (data || []).map(r => ({ id: r.id, code: r.code, kind: r.kind, page: r.page, inputId: r.input_id, machine: r.machine, time: sbFormatBangkok(r.created_at) }))
         };
     } catch (err) {
         return { success: false, message: err.message || String(err), rows: [] };

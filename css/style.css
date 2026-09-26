@@ -1353,6 +1353,12 @@ input[type="file"]::-webkit-file-upload-button {
 .cctv-root .cctv-tabs button:focus { outline: none; }
 .cctv-root .cctv-tabs button.active { background: var(--argon-primary-grad); color: #fff; box-shadow: 0 3px 8px rgba(94, 114, 228, .35); }
 
+.cctv-topbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.cctv-topbar .cctv-tabs { margin-bottom: 0; }
+.cctv-root .cctv-role button { padding: 7px 14px; font-size: 13px; }
+#cctvLiveView[data-role="viewer"] .cctv-host-only, .cctv-tabs .cctv-host-only[hidden] { display: none !important; }
+#cctvLiveView[data-role="host"] .cctv-viewer-only { display: none !important; }
+.cctv-code-input { width: 170px; max-width: 170px; padding: 8px 10px; border: 1px solid #cad1d7; border-radius: var(--argon-radius-sm); font-family: Consolas, monospace; font-size: 15px; letter-spacing: .08em; color: var(--argon-dark); background: #fff; }
 .cctv-workspace { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start; }
 .cctv-panels { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (max-width: 1150px) { .cctv-workspace { grid-template-columns: 1fr; } }
@@ -1386,6 +1392,12 @@ input[type="file"]::-webkit-file-upload-button {
 .cctv-root button.cctv-danger { background: var(--argon-danger-grad); color: #fff; border: none; }
 .cctv-root button.cctv-danger:hover { color: #fff; opacity: .92; }
 .cctv-root button.cctv-danger:disabled:hover { color: #fff; }
+.cctv-adjust { border-top: 1px solid var(--cctv-line); padding-top: 10px; margin-top: 4px; }
+.cctv-adjust summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--argon-dark); }
+.cctv-adjust-body { margin-top: 10px; font-size: 13px; color: var(--cctv-dim); }
+.cctv-adjust-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.cctv-adjust-row label { font-weight: 600; color: var(--argon-dark); }
+.cctv-adjust-row input[type=range] { flex: 0 0 170px; width: 170px; }
 .cctv-btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .cctv-btnrow button { flex: 1 1 130px; white-space: nowrap; padding: 10px 12px; }
 .cctv-status-line { font-size: 13px; color: var(--cctv-dim); margin-top: 12px; line-height: 1.6; padding-top: 10px; border-top: 1px dashed var(--cctv-line); }
