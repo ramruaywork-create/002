@@ -2,3 +2,7 @@
 scan-backup.csv
 RRQCScanner.exe
 app.ico
+ffmpeg.exe
+tools/camera/buffer/
+tools/camera/RRQCCamera.exe
+tools/camera/app.ico

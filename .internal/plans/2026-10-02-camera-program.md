@@ -68,11 +68,11 @@ Task 1 (ยืนยัน ffmpeg+กล้อง) → 2 → 3 → 4 → 5 → 6
 - คำสั่งทดลอง 1 บรรทัดสร้าง: JPEG บน stdout (อ่านเป็นภาพได้) + ท่อน `seg_*.mp4` ลง `buffer\` ทุก ~10 วินาที เล่นได้ (`ffmpeg -v error -i seg.mp4 -f null -` ไม่มี error)
 - ถ้ากล้อง EMEET ต่ออยู่กับเครื่องนี้: คำสั่งเดียวกันกับกล้องจริงที่ 1920x1080 MJPEG ได้ภาพไม่ขาด ถ้าไม่ได้ต่ออยู่: บันทึกว่าตรวจกับกล้องจริงไม่ได้ในงานนี้ และไปตรวจใน Task 13
 
-- [ ] **Step 1: ขออนุญาตผู้ใช้ก่อนดาวน์โหลด** (หยุดรอคำตอบ)
+- [x] **Step 1: ขออนุญาตผู้ใช้ก่อนดาวน์โหลด** (หยุดรอคำตอบ)
 
 ข้อความที่ต้องถาม: "ขอดาวน์โหลด ffmpeg-release-essentials.zip (~80-100 MB) จาก https://www.gyan.dev/ffmpeg/builds/ และไฟล์ .sha256 ที่คู่กัน เพื่อวางที่ tools/camera/ffmpeg.exe ตกลงไหม" ถ้าไม่ตกลง หยุดแผนทั้งหมด (โปรแกรมนี้ต้องพึ่ง ffmpeg)
 
-- [ ] **Step 2: ดาวน์โหลดและตรวจ hash**
+- [x] **Step 2: ดาวน์โหลดและตรวจ hash**
 
 ```powershell
 $tmp = Join-Path $env:TEMP 'ffmpeg-dl'; New-Item -ItemType Directory -Force $tmp | Out-Null
@@ -89,11 +89,11 @@ Copy-Item $exe.FullName 'tools\camera\ffmpeg.exe'
 ```
 Expected: บรรทัด `want`/`got` ตรงกัน และพิมพ์ `ffmpeg version ...`
 
-- [ ] **Step 3: เพิ่มบรรทัดใน `.gitignore`**
+- [x] **Step 3: เพิ่มบรรทัดใน `.gitignore`**
 
 เพิ่มท้ายไฟล์: `ffmpeg.exe`, `tools/camera/buffer/`, `tools/camera/RRQCCamera.exe`, `tools/camera/app.ico`
 
-- [ ] **Step 4: ทดลองสร้างภาพจำลอง (ไม่ใช้กล้อง) ด้วยคำสั่งเต็มที่โปรแกรมจะใช้**
+- [x] **Step 4: ทดลองสร้างภาพจำลอง (ไม่ใช้กล้อง) ด้วยคำสั่งเต็มที่โปรแกรมจะใช้**
 
 ```powershell
 $buf = Join-Path $env:TEMP 'rrqc-buf-test'; Remove-Item $buf -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory $buf | Out-Null
@@ -112,7 +112,7 @@ Start-Sleep 1
 ```
 Expected: `stdout bytes` > 100000 (หลายเฟรม JPEG) และมีไฟล์ `seg_*.mp4` อย่างน้อย 2 ไฟล์ ถ้า ffmpeg ฟ้อง error เรื่อง filter/quote/`drawbox` expression/`mjpeg` pix_fmt ให้แก้สตริงจนผ่านแล้ว **บันทึกสตริงที่ผ่านจริงลงในคอมเมนต์ท้าย Task นี้** (Task 8 ต้องใช้สตริงนั้นแทนค่าในแผน) ตรวจท่อนเล่นได้: `& tools\camera\ffmpeg.exe -v error -i "$buf\<ไฟล์แรก>" -f null -` ต้องไม่พิมพ์ error
 
-- [ ] **Step 5: ถ้ามีกล้อง EMEET ต่ออยู่ ทดลองกับกล้องจริง**
+- [x] **Step 5: ถ้ามีกล้อง EMEET ต่ออยู่ ทดลองกับกล้องจริง**
 
 ```powershell
 & tools\camera\ffmpeg.exe -hide_banner -list_devices true -f dshow -i dummy 2>&1 | Select-String '\(video\)'
@@ -121,7 +121,7 @@ $cam = 'EMEET SmartCam S600'   # ใช้ชื่อที่พิมพ์�
 ```
 บันทึกผลทั้งสองคำสั่งไว้เป็นข้อความตัวอย่างสำหรับ test parser (Task 8) แล้วลองสตรีม 1920x1080 MJPEG 15 fps 10 วินาทีด้วยอาร์กิวเมนต์อินพุต `-f dshow -video_size 1920x1080 -framerate 15 -vcodec mjpeg -i video="<ชื่อ>"` ต่อกับเอาต์พุตเดียวกับ Step 4 ถ้าไม่มีกล้อง: เขียนว่า "ไม่มีกล้องบนเครื่องนี้" และใช้ตัวอย่าง fixture ใน Task 8 แทน
 
-- [ ] **Step 6: Commit** (เฉพาะ `.gitignore`)
+- [x] **Step 6: Commit** (เฉพาะ `.gitignore`)
 
 ```bash
 git add .gitignore
@@ -131,6 +131,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
 ---
+
+**ผลการทำ (2026-10-02):**
+- ดาวน์โหลด `ffmpeg-release-essentials.zip` (109.5 MB, ffmpeg 9.0.2) SHA-256 ตรงกับค่าของ gyan.dev (`60f46726...47ba`) ผู้ใช้อนุญาตแล้ว
+- คำสั่งเต็มใน Step 4 (filter, `-pix_fmt yuvj420p`, `-segment_format_options movflags=+faststart`, `-force_key_frames`) **ทำงานได้โดยไม่ต้องแก้**: stdout ได้ JPEG 2.5 MB ใน 28 วินาที, ท่อน mp4 3 ไฟล์ decode ไม่มี error, ความยาว 10.00 วินาที, ออกด้วย `q` ได้ (exit 0)
+- ข้อสังเกต: ท่อนแรกใช้เวลาปิดไฟล์ ~12 วินาทีจากเวลาในชื่อ (เริ่มช้า ~2 วินาที) ท่อนถัดไปตรง 10 วินาที ไม่กระทบ `KeepPolicy.Ready` ที่เผื่อ 2 วินาที
+- **เครื่องนี้ไม่มีกล้อง** (`-list_devices` ไม่พบอุปกรณ์วิดีโอ) จึงยังไม่ได้ตรวจกับ EMEET จริง และยังไม่เห็นรูปแบบข้อความ `-list_devices`/`-list_options` ของ ffmpeg 9.0.2 จริง fixture ใน Task 8 เป็นรูปแบบที่คาดไว้ ต้องเทียบใน Task 13 บนเครื่องที่ต่อกล้อง
 
 ### Task 2: โครงโปรแกรม ตัวทดสอบในตัว และสคริปต์ build
 
