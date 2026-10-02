@@ -2274,7 +2274,7 @@ Expected: `OK clips=...` และ `OK http`
 - ไม่พบ `ffmpeg.exe` → ข้อความภาษาไทยบอกให้วางไว้ข้างโปรแกรม และไม่เริ่ม engine
 - `build.bat` สร้างไอคอนม่วงรูปกล้องและฝังใน exe ได้
 
-- [ ] **Step 1: เขียน `UI.cs`** (สไตล์เดียวกับ `RRQCScanner.cs`: หัวไล่สีม่วง ฟอนต์ Segoe UI)
+- [x] **Step 1: เขียน `UI.cs`** (สไตล์เดียวกับ `RRQCScanner.cs`: หัวไล่สีม่วง ฟอนต์ Segoe UI)
 
 ```csharp
 using System;
@@ -2693,7 +2693,7 @@ class MainForm : Form
 }
 ```
 
-- [ ] **Step 2: แก้ `Program.cs` เส้นทางหลัก**
+- [x] **Step 2: แก้ `Program.cs` เส้นทางหลัก**
 
 ```csharp
         if (args.Length >= 2 && args[0] == "--make-icon") { CameraArt.WriteIcoFile(args[1]); return 0; }
@@ -2724,7 +2724,7 @@ class MainForm : Form
 ```
 (ย้ายบล็อก `--headless` ไว้ก่อนเส้นทางนี้ ให้คงเดิม)
 
-- [ ] **Step 3: เพิ่มขั้นตอนไอคอนใน `build.bat`** แทนบรรทัด `echo Built RRQCCamera.exe` ด้วย
+- [x] **Step 3: เพิ่มขั้นตอนไอคอนใน `build.bat`** แทนบรรทัด `echo Built RRQCCamera.exe` ด้วย
 
 ```bat
 "%~dp0RRQCCamera.exe" --make-icon "%~dp0app.ico"
@@ -2739,9 +2739,9 @@ echo Built RRQCCamera.exe
 ```
 แล้วรัน `run-selftest.ps1` Expected: ผ่านทั้งหมด และมี `RRQCCamera.exe` พร้อมไอคอน
 
-- [ ] **Step 4: ทดสอบมือบนเครื่อง** รัน `RRQCCamera.exe --test-source --data-dir <โฟลเดอร์ชั่วคราว>` เห็นหน้าต่าง พรีวิวเป็นสี่เหลี่ยมสีขาวเคลื่อนที่ ป้ายสถานะสลับ เฝ้าระวัง/กำลังบันทึก ตัวเลข fps แสดง ปุ่มคัดลอกรหัสทำงาน ปิดหน้าต่างแล้วไอคอนยังอยู่ที่ถาด เปิดโปรแกรมซ้ำเห็นข้อความ "ทำงานอยู่แล้ว" ถ่ายภาพหน้าจอเก็บเป็นหลักฐาน (ใช้ PowerShell `CopyFromScreen`) เปิดโฟลเดอร์คลิปเห็นไฟล์ที่เกิดขึ้น
+- [x] **Step 4: ทดสอบมือบนเครื่อง** รัน `RRQCCamera.exe --test-source --data-dir <โฟลเดอร์ชั่วคราว>` เห็นหน้าต่าง พรีวิวเป็นสี่เหลี่ยมสีขาวเคลื่อนที่ ป้ายสถานะสลับ เฝ้าระวัง/กำลังบันทึก ตัวเลข fps แสดง ปุ่มคัดลอกรหัสทำงาน ปิดหน้าต่างแล้วไอคอนยังอยู่ที่ถาด เปิดโปรแกรมซ้ำเห็นข้อความ "ทำงานอยู่แล้ว" ถ่ายภาพหน้าจอเก็บเป็นหลักฐาน (ใช้ PowerShell `CopyFromScreen`) เปิดโฟลเดอร์คลิปเห็นไฟล์ที่เกิดขึ้น
 
-- [ ] **Step 5: Commit** (`feat(camera): main window, tray, startup toggle and icon`)
+- [x] **Step 5: Commit** (`feat(camera): main window, tray, startup toggle and icon`)
 
 ---
 

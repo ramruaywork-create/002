@@ -307,7 +307,8 @@ static class FfmpegTextTests
         T.True(a.Contains("-f dshow"), "dshow input"); T.True(a.Contains("-vcodec mjpeg"), "mjpeg input");
         T.True(a.Contains("-video_size 1920x1080"), "size"); T.True(a.Contains("-framerate 15"), "framerate");
         T.True(a.Contains("video=\"EMEET SmartCam S600\""), "quoted name"); T.True(a.Contains("transpose=1"), "rotation 90");
-        T.True(a.Contains("pipe:1"), "stdout pipe"); T.True(a.Contains("\"C:\\data\\buffer\\seg_%Y-%m-%d_%H-%M-%S.mp4\""), "segment path last");
+        T.True(a.Contains("pipe:1"), "stdout pipe"); T.True(a.Contains("\"C:\\data\\buffer\\seg_%Y-%m-%d_%H-%M-%S.mp4\""), "segment path");
+        T.True(a.IndexOf("libx264") < a.IndexOf("pipe:1"), "recording output first so fps= reflects camera rate");
         T.True(a.Contains("-segment_time 10"), "10s segments");
         string raw = FfmpegPipeline.BuildArgs(s, @"C:\data\buffer", false, false);
         T.True(!raw.Contains("-vcodec mjpeg"), "no mjpeg when fallback");

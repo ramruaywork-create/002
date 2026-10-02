@@ -89,10 +89,12 @@ class FfmpegPipeline : IDisposable
         string rot = s.Rotation == 90 ? "transpose=1," : s.Rotation == 180 ? "hflip,vflip," : s.Rotation == 270 ? "transpose=2," : "";
         string text = "drawtext=fontfile='C\\:/Windows/Fonts/consola.ttf':text='%{localtime}':x=w-tw-12:y=h-th-12:fontsize=h/28:fontcolor=0x3ddc97:shadowcolor=black:shadowx=1:shadowy=1";
         a.Append("-filter_complex \"[0:v]" + rot + text + ",split=2[rec][live];[live]fps=10,scale='min(1280,iw)':-2[lv]\" ");
-        a.Append("-map \"[lv]\" -an -c:v mjpeg -q:v 6 -pix_fmt yuvj420p -f image2pipe pipe:1 ");
+        // เอาต์พุตบันทึก (เฟรมเรตเต็มของกล้อง) ต้องมาก่อน เพราะตัวเลข fps= ที่ ffmpeg รายงานอิงเอาต์พุตแรก
+        // ถ้าเอาภาพสด (ลดเหลือ 10 fps) ขึ้นก่อน สถานะจะแสดง 10 fps เสมอ ใช้วินิจฉัยเฟรมตกของกล้องไม่ได้
         a.Append("-map \"[rec]\" -an -c:v libx264 -preset veryfast -crf 26 -pix_fmt yuv420p -g " + (s.Fps * 2) +
             " -force_key_frames \"expr:gte(t,n_forced*10)\" -f segment -segment_time 10 -reset_timestamps 1 -strftime 1 " +
-            "-segment_format_options movflags=+faststart \"" + bufferDir + "\\seg_%Y-%m-%d_%H-%M-%S.mp4\"");
+            "-segment_format_options movflags=+faststart \"" + bufferDir + "\\seg_%Y-%m-%d_%H-%M-%S.mp4\" ");
+        a.Append("-map \"[lv]\" -an -c:v mjpeg -q:v 6 -pix_fmt yuvj420p -f image2pipe pipe:1");
         return a.ToString();
     }
 

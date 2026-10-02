@@ -14,4 +14,12 @@ if errorlevel 1 (
   if not defined NOPAUSE pause
   exit /b 1
 )
+"%~dp0RRQCCamera.exe" --make-icon "%~dp0app.ico"
+"%CSC%" /nologo /target:winexe /codepage:65001 /win32icon:app.ico /out:RRQCCamera.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll *.cs
+if errorlevel 1 (
+  echo Build with icon failed.
+  if not defined NOPAUSE pause
+  exit /b 1
+)
+del app.ico
 echo Built RRQCCamera.exe
