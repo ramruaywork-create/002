@@ -170,6 +170,112 @@ static class ClipRecorderTests
     }
 }
 
+static class FrameTests
+{
+    public static byte[] Jpg(int w, int h, System.Drawing.Color c)
+    {
+        using (System.Drawing.Bitmap b = new System.Drawing.Bitmap(w, h))
+        {
+            using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(b)) g.Clear(c);
+            return FrameTools.MakeJpeg(b);
+        }
+    }
+
+    public static void All()
+    {
+        byte[] j1 = Jpg(64, 48, System.Drawing.Color.Red), j2 = Jpg(64, 48, System.Drawing.Color.Green), j3 = Jpg(32, 32, System.Drawing.Color.Blue);
+        System.IO.MemoryStream all = new System.IO.MemoryStream();
+        byte[] junk = { 1, 2, 3, 0xFF };
+        all.Write(junk, 0, junk.Length); all.Write(j1, 0, j1.Length); all.Write(j2, 0, j2.Length); all.Write(j3, 0, j3.Length);
+        byte[] stream = all.ToArray();
+        foreach (int chunk in new int[] { 1, 7, 1000 })
+        {
+            JpegSplitter sp = new JpegSplitter(); int n = 0;
+            for (int i = 0; i < stream.Length; i += chunk)
+            {
+                int c = Math.Min(chunk, stream.Length - i); byte[] part = new byte[c]; Array.Copy(stream, i, part, 0, c);
+                System.Collections.Generic.List<byte[]> got = sp.Push(part, c);
+                foreach (byte[] f in got) { n++; T.True(f[0] == 0xFF && f[1] == 0xD8 && f[f.Length - 2] == 0xFF && f[f.Length - 1] == 0xD9, "frame markers chunk=" + chunk); }
+            }
+            T.Eq(3, n, "3 frames chunk=" + chunk);
+        }
+        JpegSplitter sp2 = new JpegSplitter();
+        T.Eq(0, sp2.Push(j1, j1.Length - 5).Count, "incomplete frame not returned");
+        T.Eq(1, sp2.Push(new byte[] { j1[j1.Length - 5], j1[j1.Length - 4], j1[j1.Length - 3], j1[j1.Length - 2], j1[j1.Length - 1] }, 5).Count, "completes later");
+
+        byte[] rgb = FrameTools.ToRgb160(j3);
+        T.Eq(MotionDetector.W * MotionDetector.H * 3, rgb.Length, "rgb size");
+
+        MotionDetector d = new MotionDetector(); d.Sensitivity = 5;
+        byte[] a = new byte[MotionDetector.W * MotionDetector.H * 3], b = new byte[a.Length];
+        T.True(!d.Update(a), "first frame no motion");
+        T.True(!d.Update(a), "identical frame");
+        for (int i = 0; i < b.Length; i++) b[i] = 255;
+        T.True(d.Update(b), "all-white vs black = motion");
+        // ความไว 5: pixelThreshold=60 ratio=0.0075 → เปลี่ยน 1% ของพิกเซล (192 px) ด้วยความต่าง 765 ผ่านทั้งคู่ → true
+        d.Reset(); d.Update(a);
+        byte[] c2 = (byte[])a.Clone();
+        for (int p = 0; p < 192; p++) { c2[p * 3] = 255; c2[p * 3 + 1] = 255; c2[p * 3 + 2] = 255; }
+        T.True(d.Update(c2), "1% bright change at sens 5");
+        // ความไว 1: ratio=0.0111 → 192/19200 = 0.01 ไม่เกิน → false
+        d.Reset(); d.Sensitivity = 1; d.Update(a);
+        T.True(!d.Update(c2), "1% change below ratio at sens 1");
+        // ความต่างเล็กกว่า pixelThreshold (ความไว 5 = 60): ต่าง 20+20+19=59 ไม่นับ
+        d.Reset(); d.Sensitivity = 5; d.Update(a);
+        byte[] c3 = (byte[])a.Clone();
+        for (int i = 0; i < c3.Length; i += 3) { c3[i] = 20; c3[i + 1] = 20; c3[i + 2] = 19; }
+        T.True(!d.Update(c3), "small per-pixel diff ignored");
+
+        FrameHub hub = new FrameHub(); byte[] got2; long seq;
+        T.True(!hub.WaitNext(0, 50, out got2, out seq), "timeout when empty");
+        System.Threading.ThreadPool.QueueUserWorkItem(delegate { System.Threading.Thread.Sleep(100); hub.Publish(j1); });
+        T.True(hub.WaitNext(0, 2000, out got2, out seq), "wakes on publish");
+        T.Eq(1L, seq, "seq 1"); T.Eq(j1.Length, got2.Length, "payload");
+        T.True(!hub.WaitNext(1, 50, out got2, out seq), "no newer frame");
+        hub.Publish(j2);
+        T.True(hub.WaitNext(1, 50, out got2, out seq), "newer frame"); T.Eq(2L, seq, "seq 2");
+        T.True(hub.Latest() != null, "latest set");
+    }
+}
+
+static class NetPrimitivesTests
+{
+    public static void All()
+    {
+        HttpReq r;
+        T.True(HttpParse.TryParse("GET /api/clips?from=1&to=2&k=abc%20d HTTP/1.1\r\nHost: x\r\nRange: bytes=0-9", out r), "parse ok");
+        T.Eq("GET", r.Method, "method"); T.Eq("/api/clips", r.Path, "path");
+        T.Eq("abc d", r.Query["k"], "query decoded"); T.Eq("1", r.Query["from"], "query from");
+        T.Eq("bytes=0-9", r.Headers["range"], "header case-insensitive"); T.Eq("x", r.Headers["HOST"], "header HOST");
+        T.True(!HttpParse.TryParse("GET", out r), "reject short");
+        T.True(!HttpParse.TryParse("GET / FTP/1.0", out r), "reject non-http");
+        T.True(!HttpParse.TryParse("G<T / HTTP/1.1", out r), "reject odd method");
+        T.True(HttpParse.TryParse("POST /api/rot?v=90&k=x HTTP/1.1", out r), "post ok"); T.Eq("POST", r.Method, "post method");
+        T.Eq("a b+c", HttpParse.UrlDecode("a%20b%2Bc"), "urldecode");
+
+        long a, b;
+        T.True(HttpParse.TryRange("bytes=0-9", 100, out a, out b) && a == 0 && b == 9, "range a-b");
+        T.True(HttpParse.TryRange("bytes=90-", 100, out a, out b) && a == 90 && b == 99, "range a-");
+        T.True(HttpParse.TryRange("bytes=-10", 100, out a, out b) && a == 90 && b == 99, "range -n");
+        T.True(HttpParse.TryRange("bytes=0-999", 100, out a, out b) && a == 0 && b == 99, "range clamp end");
+        foreach (string bad in new string[] { "bytes=100-", "bytes=5-2", "bytes=0-1,5-6", "items=0-1", "bytes=-0", "bytes=abc", "", null })
+            T.True(!HttpParse.TryRange(bad, 100, out a, out b), "range reject " + bad);
+        T.True(!HttpParse.TryRange("bytes=0-1", 0, out a, out b), "range empty file");
+
+        T.True(Auth.CodeEquals("abcd2345", "abcd2345"), "code equal");
+        T.True(!Auth.CodeEquals("abcd2345", "abcd2346"), "code differ"); T.True(!Auth.CodeEquals("abcd2345", "abcd234"), "len differ");
+        T.True(!Auth.CodeEquals(null, "x"), "null a"); T.True(!Auth.CodeEquals("x", null), "null b");
+
+        RateLimiter rl = new RateLimiter(10, TimeSpan.FromMinutes(1)); DateTime t = new DateTime(2026, 10, 2, 9, 0, 0);
+        for (int i = 0; i < 10; i++) rl.Fail("1.1.1.1", t.AddSeconds(i));
+        T.True(!rl.IsBlocked("1.1.1.1", t.AddSeconds(10)), "10 fails not blocked");
+        rl.Fail("1.1.1.1", t.AddSeconds(11));
+        T.True(rl.IsBlocked("1.1.1.1", t.AddSeconds(12)), "11th fail blocked");
+        T.True(!rl.IsBlocked("2.2.2.2", t.AddSeconds(12)), "other ip fine");
+        T.True(!rl.IsBlocked("1.1.1.1", t.AddSeconds(80)), "unblocked after window");
+    }
+}
+
 static class SelfTest
 {
     public static int Run(string outFile)
@@ -179,6 +285,8 @@ static class SelfTest
         T.Run("clip rules", ClipRulesTests.All);
         T.Run("clip store", ClipStoreTests.All);
         T.Run("clip recorder", ClipRecorderTests.All);
+        T.Run("frames", FrameTests.All);
+        T.Run("net primitives", NetPrimitivesTests.All);
         return T.Done(outFile);
     }
 }

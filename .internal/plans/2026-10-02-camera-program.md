@@ -838,7 +838,7 @@ class ClipRecorder
 - `FrameTools.ToRgb160` คืนอาร์เรย์ยาว 160*120*3 จาก JPEG ใดๆ ขนาดภาพใดก็ได้
 - `FrameHub.WaitNext` คืนเฟรมใหม่ที่ seq มากกว่า `after`; หมดเวลาคืน false; ปลุกเธรดที่รออยู่เมื่อ `Publish`
 
-- [ ] **Step 1: เขียน test**
+- [x] **Step 1: เขียน test**
 
 ```csharp
 static class FrameTests
@@ -911,9 +911,9 @@ static class FrameTests
 ```
 ลงทะเบียน `T.Run("frames", FrameTests.All);` (ต้องมี `using System;` บนสุดของ SelfTest.cs แล้วจาก Task 2)
 
-- [ ] **Step 2: รัน** Expected: BUILD FAILED
+- [x] **Step 2: รัน** Expected: BUILD FAILED
 
-- [ ] **Step 3: เขียน `Frames.cs`**
+- [x] **Step 3: เขียน `Frames.cs`**
 
 ```csharp
 using System;
@@ -1053,7 +1053,7 @@ class FrameHub
 ```
 หมายเหตุ: test "completes later" ใช้ `Push(j1, j1.Length - 5)` แล้ว push ไบต์ท้าย 5 ไบต์ ต้องได้ 1 เฟรม ตรวจว่าข้อมูลที่ส่งไปแล้ว (ไม่ครบ) ถูกเก็บค้างไว้จริง
 
-- [ ] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): jpeg splitter, motion detector, frame hub`)
+- [x] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): jpeg splitter, motion detector, frame hub`)
 
 ---
 
@@ -1077,7 +1077,7 @@ class FrameHub
 - `CodeEquals` true เมื่อเท่ากัน, false เมื่อต่าง/ยาวต่าง/null
 - `RateLimiter(10, 1 นาที)`: ผิด 10 ครั้งยังไม่ถูกบล็อก ครั้งที่ 11 บล็อก (`IsBlocked` true) ผ่านไป 61 วินาทีปลดบล็อก ไอพีอื่นไม่โดน
 
-- [ ] **Step 1: เขียน test** (`NetPrimitivesTests`)
+- [x] **Step 1: เขียน test** (`NetPrimitivesTests`)
 
 ```csharp
 static class NetPrimitivesTests
@@ -1119,9 +1119,9 @@ static class NetPrimitivesTests
 }
 ```
 
-- [ ] **Step 2: รัน** Expected: BUILD FAILED
+- [x] **Step 2: รัน** Expected: BUILD FAILED
 
-- [ ] **Step 3: เขียน `Net.cs`**
+- [x] **Step 3: เขียน `Net.cs`**
 
 ```csharp
 using System;
@@ -1251,7 +1251,7 @@ class RateLimiter
 ```
 หมายเหตุ: `IsBlocked` ใช้ `> max` (ผิด 10 ครั้งยังไม่บล็อก ครั้งที่ 11 บล็อก) ตรงกับ test
 
-- [ ] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): http parsing, range, auth and rate limit primitives`)
+- [x] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): http parsing, range, auth and rate limit primitives`)
 
 ---
 
