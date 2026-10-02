@@ -151,7 +151,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - `run-selftest.ps1` build ผ่านและพิมพ์ `1 passed, 0 failed` (ทดสอบตัวเอง 1 ข้อ) คืนค่า exit code 0
 - ถ้าแก้ให้ test หนึ่งข้อล้มเหลว สคริปต์พิมพ์ `FAIL: ...` และ exit code เป็น 1
 
-- [ ] **Step 1: สร้าง `build.bat`**
+- [x] **Step 1: สร้าง `build.bat`**
 
 ```bat
 @echo off
@@ -173,7 +173,7 @@ if errorlevel 1 (
 echo Built RRQCCamera.exe
 ```
 
-- [ ] **Step 2: สร้าง `run-selftest.ps1`**
+- [x] **Step 2: สร้าง `run-selftest.ps1`**
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -188,7 +188,7 @@ if (Test-Path $out) { Get-Content $out } else { Write-Host 'selftest ไม่�
 exit $p.ExitCode
 ```
 
-- [ ] **Step 3: สร้าง `SelfTest.cs`**
+- [x] **Step 3: สร้าง `SelfTest.cs`**
 
 ```csharp
 using System;
@@ -232,7 +232,7 @@ static class SelfTest
 }
 ```
 
-- [ ] **Step 4: สร้าง `Program.cs` (stub ชั่วคราว)**
+- [x] **Step 4: สร้าง `Program.cs` (stub ชั่วคราว)**
 
 ```csharp
 using System;
@@ -251,11 +251,11 @@ static class Program
 }
 ```
 
-- [ ] **Step 5: รัน** `powershell -File tools\camera\run-selftest.ps1` Expected: `1 passed, 0 failed`
+- [x] **Step 5: รัน** `powershell -File tools\camera\run-selftest.ps1` Expected: `1 passed, 0 failed`
 
-- [ ] **Step 6: ทดสอบว่า test ล้มเหลวได้จริง** แก้ `T.True(true,...)` เป็น `T.True(false,...)` รันดูว่า exit code 1 และมี `FAIL:` แล้วแก้กลับ
+- [x] **Step 6: ทดสอบว่า test ล้มเหลวได้จริง** แก้ `T.True(true,...)` เป็น `T.True(false,...)` รันดูว่า exit code 1 และมี `FAIL:` แล้วแก้กลับ
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add tools/camera/build.bat tools/camera/run-selftest.ps1 tools/camera/Program.cs tools/camera/SelfTest.cs
@@ -284,7 +284,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - `ToLines` แล้ว `Parse` กลับได้ค่าเท่าเดิม (round-trip)
 - `NewCode()` ได้ 8 ตัวจากชุดอักษรที่กำหนดเสมอ และสองครั้งต่างกัน
 
-- [ ] **Step 1: เขียน test ที่ล้มเหลวก่อน** เพิ่มใน `SelfTest.cs`
+- [x] **Step 1: เขียน test ที่ล้มเหลวก่อน** เพิ่มใน `SelfTest.cs`
 
 ```csharp
 static class SettingsTests
@@ -323,9 +323,9 @@ static class SettingsTests
 ```
 และเพิ่ม `T.Run("settings", SettingsTests.All);` ใน `SelfTest.Run` ก่อน `return`
 
-- [ ] **Step 2: รัน** `run-selftest.ps1` Expected: BUILD FAILED (ยังไม่มี `Settings`)
+- [x] **Step 2: รัน** `run-selftest.ps1` Expected: BUILD FAILED (ยังไม่มี `Settings`)
 
-- [ ] **Step 3: เขียน `Settings.cs`**
+- [x] **Step 3: เขียน `Settings.cs`**
 
 ```csharp
 using System;
@@ -479,9 +479,9 @@ class Settings
 }
 ```
 
-- [ ] **Step 4: รัน** `run-selftest.ps1` Expected: `... passed, 0 failed`
+- [x] **Step 4: รัน** `run-selftest.ps1` Expected: `... passed, 0 failed`
 
-- [ ] **Step 5: Commit** (`git add tools/camera/Settings.cs tools/camera/SelfTest.cs`, ข้อความ `feat(camera): settings, paths and log`)
+- [x] **Step 5: Commit** (`git add tools/camera/Settings.cs tools/camera/SelfTest.cs`, ข้อความ `feat(camera): settings, paths and log`)
 
 ---
 
