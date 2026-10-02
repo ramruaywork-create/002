@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=23">
+    <link rel="stylesheet" href="css/style.css?v=24">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -347,163 +347,73 @@
             </div>
 
             <div id="pageCctv" class="page">
-                <h2 class="page-title">📹 กล้อง CCTV <span class="cctv-title-sub">บันทึกอัตโนมัติเมื่อจับความเคลื่อนไหว</span></h2>
+                <h2 class="page-title">📹 กล้อง CCTV <span class="cctv-title-sub">ดูกล้องจากโปรแกรม RRQC Camera บนคอมเครื่องหลัก</span></h2>
                 <div class="cctv-root">
-                    <div class="cctv-notice" id="cctvContextNotice" style="display:none;">
-                        <strong>ต้องเปิดผ่านเซิร์ฟเวอร์ท้องถิ่น:</strong> หน้านี้ถูกเปิดแบบ <code>file://</code> โดยตรง
-                        ทำให้เบราว์เซอร์ปิดกั้นการเลือกโฟลเดอร์บันทึกไฟล์ กรุณาเปิดผ่าน <code>http://localhost</code> หรือ Live Server
-                        ไฟล์จะยังบันทึกได้ด้วยการดาวน์โหลดอัตโนมัติ แต่จะเลือกโฟลเดอร์ปลายทางเองไม่ได้
+                    <div class="cctv-tabs">
+                        <button type="button" class="active" id="cctvTabLive">🔴 กล้องสด</button>
+                        <button type="button" id="cctvTabPb">⏪ ดูย้อนหลัง</button>
                     </div>
 
-                    <div class="cctv-topbar">
-                        <div class="cctv-tabs">
-                            <button type="button" class="active" id="cctvTabLive">🔴 กล้องสด</button>
-                            <button type="button" id="cctvTabPb">⏪ ดูย้อนหลัง</button>
+                    <div class="cctv-card cctv-conn">
+                        <div class="cctv-row">
+                            <div><label for="cctvAddr">ที่อยู่เครื่องหลัก</label><span class="cctv-hint">เช่น 192.168.1.68:8787 (ดูได้ในหน้าต่างโปรแกรม RRQC Camera)</span></div>
+                            <input type="text" id="cctvAddr" class="cctv-code-input" style="width:210px;max-width:210px" autocomplete="off" spellcheck="false">
                         </div>
-                        <div class="cctv-tabs cctv-role" title="เครื่องที่เสียบกล้อง EMEET = เครื่องนี้เป็นกล้อง / มือถือหรือเครื่องอื่น = ดูกล้อง">
-                            <button type="button" id="cctvRoleHost">📷 เครื่องนี้มีกล้อง</button>
-                            <button type="button" id="cctvRoleView">📱 ดูกล้องจากเครื่องอื่น</button>
+                        <div class="cctv-row">
+                            <div><label for="cctvCode">รหัสดูกล้อง</label><span class="cctv-hint">รหัส 8 ตัวที่แสดงในโปรแกรม</span></div>
+                            <input type="text" id="cctvCode" class="cctv-code-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="รหัส 8 ตัว">
                         </div>
+                        <div class="cctv-btnrow"><button type="button" class="cctv-primary" id="cctvConnect">เชื่อมต่อ</button></div>
+                        <div class="cctv-status-line">สถานะ: <strong id="cctvConnStatus">ยังไม่ได้เชื่อมต่อ</strong></div>
                     </div>
 
-                    <div id="cctvLiveView" data-role="host">
-                    <div class="cctv-workspace">
+                    <div id="cctvLiveView">
                         <div class="cctv-monitor" id="cctvMonitor">
-                            <video id="cctvVideo" class="cctv-host-only" autoplay muted playsinline style="display:none;"></video>
-                            <video id="cctvRemote" class="cctv-viewer-only" autoplay muted playsinline></video>
-                            <button type="button" class="cctv-rotate-btn" id="cctvRotateBtn" title="หมุนภาพทีละ 90° (ตั้ง/นอน/กลับหัว)">🔄 หมุนภาพ</button>
-                            <canvas class="cctv-overlay cctv-host-only" id="cctvOverlay"></canvas>
-                            <canvas id="cctvRecordCanvas" style="display:none;"></canvas>
-                            <div class="cctv-scan"></div>
-                            <div class="cctv-vignette"></div>
-                            <div class="cctv-hud" id="cctvHud"><span class="cctv-dot"></span><span id="cctvHudText">ยังไม่ได้เปิดกล้อง</span></div>
-                            <div class="cctv-timestamp cctv-host-only" id="cctvTimestamp"></div>
-                            <div class="cctv-placeholder" id="cctvPlaceholder">กำลังเปิดกล้อง... กรุณาอนุญาตการเข้าถึงกล้องหากเบราว์เซอร์ถาม</div>
+                            <img id="cctvLiveImg" alt="กล้องสด">
+                            <div class="cctv-hud" id="cctvHud"><span class="cctv-dot"></span><span id="cctvHudText">ยังไม่ได้เชื่อมต่อ</span></div>
+                            <div class="cctv-placeholder" id="cctvPlaceholder">ใส่ที่อยู่และรหัส แล้วกด "เชื่อมต่อ"</div>
                         </div>
-
-                        <div class="cctv-panels">
-                            <div class="cctv-card cctv-viewer-only">
-                                <h3>ดูกล้องจากเครื่องอื่น</h3>
-                                <div class="cctv-row">
-                                    <div><label for="cctvViewCode">รหัสดูกล้อง</label><span class="cctv-hint">ดูรหัสได้ที่เครื่องที่เสียบกล้อง (การ์ด "แชร์ให้มือถือดู")</span></div>
-                                    <input type="text" id="cctvViewCode" class="cctv-code-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="รหัส 8 ตัว">
-                                </div>
-                                <div class="cctv-row">
-                                    <div><label for="cctvRotSelView">การหมุนภาพ</label><span class="cctv-hint">สั่งหมุนที่กล้องของเครื่องหลักจากตรงนี้ได้เลย (เครื่องอื่นที่ดูอยู่หมุนตามด้วย)</span></div>
-                                    <select id="cctvRotSelView"><option value="0">ปกติ</option><option value="90">หมุนขวา 90°</option><option value="180">กลับหัว 180°</option><option value="270">หมุนซ้าย 90°</option></select>
-                                </div>
-                                <div class="cctv-btnrow">
-                                    <button type="button" class="cctv-primary" id="cctvViewConnect">เชื่อมต่อ</button>
-                                    <button type="button" id="cctvViewFull">⛶ เต็มจอ</button>
-                                </div>
-                                <div class="cctv-status-line">สถานะ: <strong id="cctvViewStatus">ยังไม่ได้เชื่อมต่อ</strong></div>
+                        <div class="cctv-card" style="margin-top:12px">
+                            <div class="cctv-row">
+                                <div><label for="cctvRot">การหมุนภาพ</label><span class="cctv-hint">สั่งหมุนที่กล้องของเครื่องหลัก (คลิปที่บันทึกต่อจากนี้ตั้งตรงด้วย) ภาพจะสะดุดสักครู่ขณะโปรแกรมรีสตาร์ตกล้อง</span></div>
+                                <select id="cctvRot"><option value="0">ปกติ</option><option value="90">หมุนขวา 90°</option><option value="180">กลับหัว 180°</option><option value="270">หมุนซ้าย 90°</option></select>
                             </div>
-
-                            <div class="cctv-card cctv-host-only">
-                                <h3>การควบคุม</h3>
-                                <div class="cctv-btnrow">
-                                    <button type="button" class="cctv-primary" id="cctvBtnStart">เปิดกล้อง</button>
-                                    <button type="button" id="cctvBtnFolder">เลือกโฟลเดอร์บันทึก</button>
-                                    <input id="cctvFolderInput" type="file" webkitdirectory directory multiple hidden>
-                                    <button type="button" class="cctv-danger" id="cctvBtnStop" disabled>ปิดกล้อง</button>
-                                </div>
-
-                                <div class="cctv-row">
-                                    <div><label for="cctvSensitivity">ความไว</label><span class="cctv-hint">ลากไปทางซ้าย = ต้องขยับแรงกว่าถึงจะบันทึก</span></div>
-                                    <input type="range" id="cctvSensitivity" min="1" max="10" value="5">
-                                </div>
-                                <div class="cctv-row">
-                                    <div><label for="cctvCooldown">หยุดอัดหลังไม่มีการเคลื่อนไหว</label><span class="cctv-hint">กล้องไม่ปิด แค่หยุดอัดคลิปแล้วเฝ้าระวังต่อ</span></div>
-                                    <select id="cctvCooldown">
-                                        <option value="3000">3 วินาที</option>
-                                        <option value="5000" selected>5 วินาที</option>
-                                        <option value="10000">10 วินาที</option>
-                                    </select>
-                                </div>
-                                <div class="cctv-row">
-                                    <div><label for="cctvCamSelect">เลือกกล้อง</label></div>
-                                    <select id="cctvCamSelect"><option>อุปกรณ์เดียว</option></select>
-                                </div>
-                                <div class="cctv-row">
-                                    <div><label for="cctvRotSelHost">การหมุนภาพ</label><span class="cctv-hint">กล้องติดตั้งตะแคงหรือกลับหัว (คลิปที่บันทึกจะตั้งตรงด้วย)</span></div>
-                                    <select id="cctvRotSelHost"><option value="0">ปกติ</option><option value="90">หมุนขวา 90°</option><option value="180">กลับหัว 180°</option><option value="270">หมุนซ้าย 90°</option></select>
-                                </div>
-                                <div class="cctv-row">
-                                    <div><label for="cctvResolution">ความละเอียด</label><span class="cctv-hint">กล้องบางรุ่นอาจไม่รองรับทุกขนาด</span></div>
-                                    <select id="cctvResolution">
-                                        <option value="auto">อัตโนมัติ (ไม่แนะนำ)</option>
-                                        <option value="320x240">320 x 240</option>
-                                        <option value="640x480" selected>640 x 480</option>
-                                        <option value="1280x720">1280 x 720 HD</option>
-                                        <option value="1920x1080">1920 x 1080 Full HD</option>
-                                        <option value="2560x1440">2560 x 1440 2K</option>
-                                    </select>
-                                </div>
-
-                                <details class="cctv-adjust">
-                                    <summary>🎛️ ปรับภาพ (แสง / สี) — ใช้เมื่อภาพสว่างจ้าหรือมืดเกินไป</summary>
-                                    <div id="cctvAdjust" class="cctv-adjust-body">เปิดกล้องก่อน</div>
-                                </details>
-
-                                <div class="cctv-status-line">
-                                    สถานะ: <strong id="cctvStatusText">ปิดอยู่</strong><br>
-                                    โฟลเดอร์ปลายทาง: <span class="cctv-folder-path" id="cctvFolderPath">ยังไม่ได้เลือก</span><br>
-                                    กล้องส่งภาพจริง: <span class="cctv-folder-path" id="cctvActualInfo">-</span>
-                                </div>
-                            </div>
-
-                            <div class="cctv-card cctv-host-only">
-                                <h3>📱 แชร์ให้มือถือดู</h3>
-                                <div class="cctv-row">
-                                    <div><label for="cctvShareCode">รหัสดูกล้อง</label><span class="cctv-hint">เปิดหน้านี้บนมือถือ เลือก "ดูกล้องจากเครื่องอื่น" แล้วใส่รหัสนี้</span></div>
-                                    <input type="text" id="cctvShareCode" class="cctv-code-input" readonly>
-                                </div>
-                                <div class="cctv-btnrow">
-                                    <button type="button" id="cctvShareNew">🔄 สร้างรหัสใหม่</button>
-                                </div>
-                                <div class="cctv-status-line">ผู้ที่กำลังดู: <strong id="cctvShareViewers">0</strong> เครื่อง</div>
-                            </div>
-
-                            <div class="cctv-card cctv-host-only">
-                                <h3>ประวัติการบันทึก</h3>
-                                <ul class="cctv-log" id="cctvLog"><li class="cctv-log-empty">ยังไม่มีคลิปที่บันทึก</li></ul>
-                            </div>
+                            <div class="cctv-btnrow"><button type="button" id="cctvFull">⛶ เต็มจอ</button></div>
                         </div>
-                    </div>
                     </div>
 
                     <div id="cctvPbView" hidden>
-                    <div class="cctv-card cctv-playback" id="cctvPlayback">
-                        <div class="cctv-quick">
-                            <span>เลือกช่วงเวลา:</span>
-                            <button type="button" data-quick="hour">1 ชม.ล่าสุด</button>
-                            <button type="button" data-quick="today">วันนี้</button>
-                            <button type="button" data-quick="yesterday">เมื่อวาน</button>
+                        <div class="cctv-card cctv-playback" id="cctvPlayback">
+                            <div class="cctv-quick">
+                                <span>เลือกช่วงเวลา:</span>
+                                <button type="button" data-quick="hour">1 ชม.ล่าสุด</button>
+                                <button type="button" data-quick="today">วันนี้</button>
+                                <button type="button" data-quick="yesterday">เมื่อวาน</button>
+                            </div>
+                            <div class="cctv-pb-controls">
+                                <label>วันที่ <input type="date" id="cctvPbDate"></label>
+                                <label>ตั้งแต่ <input type="time" id="cctvPbFrom" value="00:00"></label>
+                                <label>ถึง <input type="time" id="cctvPbTo" value="23:59"></label>
+                                <button type="button" class="cctv-primary" id="cctvPbLoad">🔍 ค้นหาคลิป</button>
+                                <span class="cctv-hint" id="cctvPbInfo">เลือกวันและช่วงเวลา แล้วกด "ค้นหาคลิป"</span>
+                            </div>
+                            <div class="cctv-pb-player">
+                                <video id="cctvPbVideo" controls playsinline preload="metadata"></video>
+                                <div class="cctv-pb-now" id="cctvPbNow">--:--:--</div>
+                            </div>
+                            <div class="cctv-pb-actions">
+                                <button type="button" id="cctvPbPrev" disabled>⏮ คลิปก่อนหน้า</button>
+                                <button type="button" id="cctvPbNext" disabled>คลิปถัดไป ⏭</button>
+                                <span class="cctv-spacer"></span>
+                                <button type="button" id="cctvPbDownload" disabled>⬇ ดาวน์โหลดคลิปนี้</button>
+                                <button type="button" id="cctvPbDownloadAll" disabled>⬇ ดาวน์โหลดทั้งช่วง</button>
+                            </div>
+                            <div class="cctv-tl-wrap">
+                                <div class="cctv-tl" id="cctvTl"><div class="cctv-tl-head" id="cctvTlHead" hidden></div></div>
+                                <div class="cctv-tl-ticks" id="cctvTlTicks"></div>
+                            </div>
+                            <ul class="cctv-log cctv-pb-list" id="cctvPbList"></ul>
                         </div>
-                        <div class="cctv-pb-controls">
-                            <label>วันที่ <input type="date" id="cctvPbDate"></label>
-                            <label>ตั้งแต่ <input type="time" id="cctvPbFrom" value="00:00"></label>
-                            <label>ถึง <input type="time" id="cctvPbTo" value="23:59"></label>
-                            <button type="button" class="cctv-primary" id="cctvPbLoad">🔍 ค้นหาคลิป</button>
-                            <span class="cctv-hint" id="cctvPbInfo">เลือกวันและช่วงเวลา แล้วกด "ค้นหาคลิป"</span>
-                        </div>
-                        <div class="cctv-pb-player">
-                            <video id="cctvPbVideo" controls playsinline></video>
-                            <div class="cctv-pb-now" id="cctvPbNow">--:--:--</div>
-                        </div>
-                        <div class="cctv-pb-actions">
-                            <button type="button" id="cctvPbPrev" disabled>⏮ คลิปก่อนหน้า</button>
-                            <button type="button" id="cctvPbNext" disabled>คลิปถัดไป ⏭</button>
-                            <span class="cctv-spacer"></span>
-                            <button type="button" id="cctvPbDownload" disabled>⬇ ดาวน์โหลดคลิปนี้</button>
-                            <button type="button" id="cctvPbDownloadAll" disabled>⬇ ดาวน์โหลดทั้งช่วง</button>
-                        </div>
-                        <div class="cctv-tl-wrap">
-                            <div class="cctv-tl" id="cctvTl"><div class="cctv-tl-head" id="cctvTlHead" hidden></div></div>
-                            <div class="cctv-tl-ticks" id="cctvTlTicks"></div>
-                        </div>
-                        <ul class="cctv-log cctv-pb-list" id="cctvPbList"></ul>
-                    </div>
                     </div>
                 </div>
             </div>
@@ -605,7 +515,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-api.js?v=9"></script>
 <script src="js/script.js?v=42"></script>
-<script src="js/cctv.js?v=22"></script>
+<script src="js/cctv.js?v=23"></script>
 <script src="js/scanlog.js?v=5"></script>
 
 </body>

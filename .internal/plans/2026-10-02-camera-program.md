@@ -2765,7 +2765,7 @@ echo Built RRQCCamera.exe
 - ไม่มีโค้ดเปิดกล้อง/`getUserMedia`/`MediaRecorder`/`showDirectoryPicker`/WebRTC เหลือใน `js/cctv.js` (ตรวจด้วย `Select-String`)
 - ตรวจในเบราว์เซอร์: โหลดไม่มี console error; กับโปรแกรมที่รัน `--headless --test-source` เห็นภาพสด สถานะ รายการคลิป เล่นคลิปได้
 
-- [ ] **Step 1: แทนบล็อก `pageCctv` ใน `index.html`** ด้วยโครงนี้ (คงเอกลักษณ์ `id="pageCctv" class="page"` และหัวข้อเดิม)
+- [x] **Step 1: แทนบล็อก `pageCctv` ใน `index.html`** ด้วยโครงนี้ (คงเอกลักษณ์ `id="pageCctv" class="page"` และหัวข้อเดิม)
 
 ```html
             <div id="pageCctv" class="page">
@@ -2841,7 +2841,7 @@ echo Built RRQCCamera.exe
             </div>
 ```
 
-- [ ] **Step 2: เขียน `js/cctv.js` ใหม่ทั้งไฟล์**
+- [x] **Step 2: เขียน `js/cctv.js` ใหม่ทั้งไฟล์**
 
 ```javascript
 // ==========================================================
@@ -3093,7 +3093,7 @@ echo Built RRQCCamera.exe
 })();
 ```
 
-- [ ] **Step 3: เพิ่ม CSS ท้าย `css/style.css`**
+- [x] **Step 3: เพิ่ม CSS ท้าย `css/style.css`**
 
 ```css
 /* กล้อง CCTV ฝั่งดู: ภาพสดเป็น <img> (MJPEG) */
@@ -3103,16 +3103,16 @@ echo Built RRQCCamera.exe
 ```
 (`.cctv-monitor` เดิมมี `container-type`/ตัวแปร `--cctv-ar` และกฎ `rot-*` ของวิดีโอ ซึ่งไม่ถูกใช้แล้ว ปล่อยไว้ได้ หากทำให้ภาพเพี้ยน ให้ลบกฎ `.cctv-monitor.rot-*` ออก)
 
-- [ ] **Step 4: ตรวจโค้ดเก่าถูกถอนครบ**
+- [x] **Step 4: ตรวจโค้ดเก่าถูกถอนครบ**
 
 ```powershell
 Select-String js\cctv.js -Pattern 'getUserMedia|MediaRecorder|showDirectoryPicker|RTCPeerConnection|sbClient' | Measure-Object | % Count
 ```
 Expected: `0`; ตรวจ syntax: `node --check js/cctv.js`; ขยับเลขเวอร์ชันใน `index.html` (`cctv.js?v=23`, `style.css?v=24`) ด้วย `[IO.File]::ReadAllText/WriteAllText` แบบ UTF-8 ไม่มี BOM (ห้ามใช้ `Set-Content`)
 
-- [ ] **Step 5: ตรวจในเบราว์เซอร์** รัน `RRQCCamera.exe --headless --test-source --data-dir <tmp>` (ตั้งพอร์ตและรหัสใน `<tmp>\settings.ini`), สั่ง `preview_start` เว็บ (`wr-static` พอร์ต 5510) เปิด `http://localhost:5510/index.html#cctv` ใส่ `localhost:<port>` กับรหัส กดเชื่อมต่อ Expected: เห็นภาพ (สี่เหลี่ยมขาวเคลื่อนที่ + เวลา), สถานะ "กำลังดูกล้องสด", ไม่มี console error แท็บย้อนหลังเห็นคลิปหลังรอ ~1 นาที เล่นได้ ทดสอบผิดรหัส (ได้ข้อความ "รหัสไม่ถูกต้อง") และปิดโปรแกรมแล้วเห็นข้อความติดต่อไม่ได้ + ลองใหม่เอง ถ่ายภาพหน้าจอเก็บ ลองเปลี่ยนการหมุนเป็น 90° ดูว่าภาพหมุนและเว็บต่อใหม่
+- [x] **Step 5: ตรวจในเบราว์เซอร์** รัน `RRQCCamera.exe --headless --test-source --data-dir <tmp>` (ตั้งพอร์ตและรหัสใน `<tmp>\settings.ini`), สั่ง `preview_start` เว็บ (`wr-static` พอร์ต 5510) เปิด `http://localhost:5510/index.html#cctv` ใส่ `localhost:<port>` กับรหัส กดเชื่อมต่อ Expected: เห็นภาพ (สี่เหลี่ยมขาวเคลื่อนที่ + เวลา), สถานะ "กำลังดูกล้องสด", ไม่มี console error แท็บย้อนหลังเห็นคลิปหลังรอ ~1 นาที เล่นได้ ทดสอบผิดรหัส (ได้ข้อความ "รหัสไม่ถูกต้อง") และปิดโปรแกรมแล้วเห็นข้อความติดต่อไม่ได้ + ลองใหม่เอง ถ่ายภาพหน้าจอเก็บ ลองเปลี่ยนการหมุนเป็น 90° ดูว่าภาพหมุนและเว็บต่อใหม่
 
-- [ ] **Step 6: Commit** (`feat(web): CCTV page is now a viewer for RRQC Camera`) — `git add index.html js/cctv.js css/style.css`
+- [x] **Step 6: Commit** (`feat(web): CCTV page is now a viewer for RRQC Camera`) — `git add index.html js/cctv.js css/style.css`
 
 ---
 
