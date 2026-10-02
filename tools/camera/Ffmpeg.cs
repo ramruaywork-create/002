@@ -78,7 +78,7 @@ class FfmpegPipeline : IDisposable
         if (testSource)
         {
             a.Append("-re -f lavfi -i \"color=c=0x303030:s=" + s.Width + "x" + s.Height + ":r=" + s.Fps +
-                ",drawbox=x='mod(t*150,iw-200)':y=100:w=200:h=200:color=white:t=fill:enable='lt(mod(t,20),6)'\" ");
+                ",drawbox=x='mod(t*150,iw-200)':y=100:w=200:h=200:color=white:t=fill:enable='lt(mod(t,40),6)'\" ");   // เคลื่อนไหว 6 วินาทีทุก 40 วินาที (ให้เห็นท่อนที่ถูกลบ)
         }
         else
         {

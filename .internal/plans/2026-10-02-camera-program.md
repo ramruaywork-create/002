@@ -1626,7 +1626,7 @@ static class PipelineIntegration
 - ลบคลิปเก่าตามจำนวนวันตอนเริ่มและเมื่อวันเปลี่ยน (เฉพาะ `RetentionDays > 0`)
 - Integration (test source ผ่าน `tests/integration.ps1`): รัน 75 วินาทีด้วย cooldown 3 วินาที ได้คลิปอย่างน้อย 2 ไฟล์ ชื่อตรงรูปแบบ ทุกไฟล์ผ่าน `ffmpeg -v error -i <file> -f null -` ไม่มี error, ไม่มีท่อน `seg_*` ค้างในโฟลเดอร์พักที่เก่ากว่า 40 วินาที
 
-- [ ] **Step 1: เขียน `Engine.cs`**
+- [x] **Step 1: เขียน `Engine.cs`**
 
 ```csharp
 using System;
@@ -1750,7 +1750,7 @@ class CameraEngine : IServerHost, IDisposable
 }
 ```
 
-- [ ] **Step 2: เพิ่ม headless ใน `Program.cs`** แทนที่ stub ด้วย
+- [x] **Step 2: เพิ่ม headless ใน `Program.cs`** แทนที่ stub ด้วย
 
 ```csharp
 using System;
@@ -1786,7 +1786,7 @@ static class Program
 }
 ```
 
-- [ ] **Step 3: เขียน `tests/integration.ps1`** (ส่วนคลิป; Task 10 เพิ่มส่วน HTTP)
+- [x] **Step 3: เขียน `tests/integration.ps1`** (ส่วนคลิป; Task 10 เพิ่มส่วน HTTP)
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -1818,9 +1818,9 @@ try {
 }
 ```
 
-- [ ] **Step 4: Build และรัน** `cmd /c "set NOPAUSE=1&& tools\camera\build.bat"` แล้ว `powershell -File tools\camera\tests\integration.ps1` Expected: `OK clips=N: ...` (N ≥ 2) ถ้าล้ม ดู `$data\camera.log`
+- [x] **Step 4: Build และรัน** `cmd /c "set NOPAUSE=1&& tools\camera\build.bat"` แล้ว `powershell -File tools\camera\tests\integration.ps1` Expected: `OK clips=N: ...` (N ≥ 2) ถ้าล้ม ดู `$data\camera.log`
 
-- [ ] **Step 5: Commit** (`feat(camera): engine wiring motion, recorder and retention`)
+- [x] **Step 5: Commit** (`feat(camera): engine wiring motion, recorder and retention`)
 
 ---
 
