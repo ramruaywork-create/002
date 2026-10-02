@@ -1275,7 +1275,7 @@ class RateLimiter
 - Integration (test source): รัน `Start()` 15 วินาที ได้ `Frame` มากกว่า 50 เฟรมที่ JPEG ถูกต้อง, `State == "running"`, มีไฟล์ `seg_*.mp4` ในโฟลเดอร์พัก, `Stop()` ใช้เวลาไม่เกิน 6 วินาที และไม่เหลือโปรเซส `ffmpeg`
 - ฆ่า ffmpeg ด้วยมือ: pipeline เปิดใหม่เอง (State เป็น `recovering` แล้วกลับ `running`) และยิง `ProcessEnded(false)`
 
-- [ ] **Step 1: เขียน test ส่วน parser/args (หน่วย)**
+- [x] **Step 1: เขียน test ส่วน parser/args (หน่วย)**
 
 ```csharp
 static class FfmpegTextTests
@@ -1323,9 +1323,9 @@ static class FfmpegTextTests
 ```
 ลงทะเบียน `T.Run("ffmpeg text", FfmpegTextTests.All);`
 
-- [ ] **Step 2: รัน** Expected: BUILD FAILED
+- [x] **Step 2: รัน** Expected: BUILD FAILED
 
-- [ ] **Step 3: เขียน `Ffmpeg.cs`**
+- [x] **Step 3: เขียน `Ffmpeg.cs`**
 
 **สำคัญ:** สตริง filter/อาร์กิวเมนต์ด้านล่างเป็นค่าตั้งต้นจากแผน ให้เทียบกับสตริงที่ผ่านจริงใน Task 1 Step 4 แล้วแก้ให้ตรงก่อน (อย่างน้อย: การ escape พาธฟอนต์, `drawbox`, `-pix_fmt yuvj420p`) ถ้า Task 1 ปรับ ให้แก้ test `BuildArgs` ข้างบนให้ตรงด้วย
 
@@ -1567,9 +1567,9 @@ class FfmpegPipeline : IDisposable
     }
 }
 ```
-- [ ] **Step 4: รัน** `run-selftest.ps1` Expected: ผ่านทั้งหมด
+- [x] **Step 4: รัน** `run-selftest.ps1` Expected: ผ่านทั้งหมด
 
-- [ ] **Step 5: เขียนและรัน integration แบบ test source** เพิ่ม mode ใน `SelfTest.cs`: ฟังก์ชัน `PipelineIntegration.All()` ลงทะเบียนเฉพาะเมื่อมี `ffmpeg.exe` อยู่ข้างโปรแกรม (ถ้าไม่มีให้ข้ามพร้อมบันทึก `SKIP`)
+- [x] **Step 5: เขียนและรัน integration แบบ test source** เพิ่ม mode ใน `SelfTest.cs`: ฟังก์ชัน `PipelineIntegration.All()` ลงทะเบียนเฉพาะเมื่อมี `ffmpeg.exe` อยู่ข้างโปรแกรม (ถ้าไม่มีให้ข้ามพร้อมบันทึก `SKIP`)
 
 ```csharp
 static class PipelineIntegration
@@ -1602,9 +1602,9 @@ static class PipelineIntegration
 ```
 **ข้อควรระวัง:** test นี้ฆ่า `ffmpeg` **ทุกตัว** บนเครื่อง ห้ามรันตอนผู้ใช้กำลังใช้ ffmpeg อื่น (แจ้งผู้ใช้ก่อนรัน) ลงทะเบียน `T.Run("pipeline integration", PipelineIntegration.All);` ในตอนท้ายสุดของ `Run`
 
-- [ ] **Step 6: รัน** Expected: ผ่านทั้งหมด (ใช้เวลา ~30 วินาที) ถ้า `segments written` ไม่ผ่าน ตรวจ `Log` ที่ `%APPDATA%\RRQC-Camera\camera.log`
+- [x] **Step 6: รัน** Expected: ผ่านทั้งหมด (ใช้เวลา ~30 วินาที) ถ้า `segments written` ไม่ผ่าน ตรวจ `Log` ที่ `%APPDATA%\RRQC-Camera\camera.log`
 
-- [ ] **Step 7: Commit** (`feat(camera): ffmpeg pipeline with supervision and device/mode parsing`)
+- [x] **Step 7: Commit** (`feat(camera): ffmpeg pipeline with supervision and device/mode parsing`)
 
 ---
 

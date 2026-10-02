@@ -276,6 +276,77 @@ static class NetPrimitivesTests
     }
 }
 
+static class FfmpegTextTests
+{
+    const string Devs =
+        "[dshow @ 000001a] DirectShow video devices (some may be both video and audio devices)\r\n" +
+        "[dshow @ 000001a]  \"EMEET SmartCam S600\" (video)\r\n" +
+        "[dshow @ 000001a]   Alternative name \"@device_pnp_\\\\?\\usb#vid_328f\"\r\n" +
+        "[dshow @ 000001a] DirectShow audio devices\r\n" +
+        "[dshow @ 000001a]  \"Microphone (EMEET)\" (audio)\r\n" +
+        "[dshow @ 000001a]  \"Other thing\" (none)\r\n" +
+        "[dshow @ 000001a]  \"Integrated Webcam\" (video)\r\n";
+    const string Modes =
+        "[dshow @ 000001a] DirectShow video device options (from video devices)\r\n" +
+        "[dshow @ 000001a]  Pin \"Capture\" (alternative pin name \"Capture\")\r\n" +
+        "[dshow @ 000001a]   pixel_format=yuyv422  min s=640x480 fps=5 max s=640x480 fps=30\r\n" +
+        "[dshow @ 000001a]   pixel_format=yuyv422  min s=640x480 fps=5 max s=640x480 fps=30\r\n" +
+        "[dshow @ 000001a]   vcodec=mjpeg  min s=1920x1080 fps=5 max s=1920x1080 fps=30\r\n" +
+        "[dshow @ 000001a]   vcodec=mjpeg  min s=2560x1440 fps=5 max s=2560x1440 fps=30\r\n";
+
+    public static void All()
+    {
+        System.Collections.Generic.List<string> d = FfmpegText.ParseDevices(Devs);
+        T.Eq(2, d.Count, "2 video devices"); T.Eq("EMEET SmartCam S600", d[0], "first device"); T.Eq("Integrated Webcam", d[1], "second device");
+        System.Collections.Generic.List<CameraMode> m = FfmpegText.ParseModes(Modes);
+        T.Eq(3, m.Count, "3 distinct modes");
+        T.Eq("mjpeg", m[1].Codec, "mjpeg codec"); T.Eq(1920, m[1].Width, "w"); T.Eq(1080, m[1].Height, "h"); T.Eq(30.0, m[1].MaxFps, "fps");
+
+        Settings s = new Settings(); s.CameraName = "EMEET SmartCam S600"; s.Width = 1920; s.Height = 1080; s.Fps = 15; s.Rotation = 90;
+        string a = FfmpegPipeline.BuildArgs(s, @"C:\data\buffer", false, true);
+        T.True(a.Contains("-f dshow"), "dshow input"); T.True(a.Contains("-vcodec mjpeg"), "mjpeg input");
+        T.True(a.Contains("-video_size 1920x1080"), "size"); T.True(a.Contains("-framerate 15"), "framerate");
+        T.True(a.Contains("video=\"EMEET SmartCam S600\""), "quoted name"); T.True(a.Contains("transpose=1"), "rotation 90");
+        T.True(a.Contains("pipe:1"), "stdout pipe"); T.True(a.Contains("\"C:\\data\\buffer\\seg_%Y-%m-%d_%H-%M-%S.mp4\""), "segment path last");
+        T.True(a.Contains("-segment_time 10"), "10s segments");
+        string raw = FfmpegPipeline.BuildArgs(s, @"C:\data\buffer", false, false);
+        T.True(!raw.Contains("-vcodec mjpeg"), "no mjpeg when fallback");
+        s.Rotation = 0; T.True(!FfmpegPipeline.BuildArgs(s, @"C:\b", false, true).Contains("transpose"), "no rotation");
+        s.Rotation = 180; T.True(FfmpegPipeline.BuildArgs(s, @"C:\b", false, true).Contains("hflip,vflip"), "180");
+        s.Rotation = 270; T.True(FfmpegPipeline.BuildArgs(s, @"C:\b", false, true).Contains("transpose=2"), "270");
+        string t = FfmpegPipeline.BuildArgs(s, @"C:\b", true, true);
+        T.True(t.Contains("-f lavfi") && !t.Contains("dshow"), "test source uses lavfi");
+    }
+}
+
+static class PipelineIntegration
+{
+    public static void All()
+    {
+        string ff = AppPaths.FfmpegPath;
+        if (!File.Exists(ff)) { T.True(true, "SKIP pipeline integration: no ffmpeg.exe"); return; }
+        string buf = Path.Combine(Path.GetTempPath(), "rrqc-t-" + Guid.NewGuid().ToString("N"));
+        Settings s = new Settings(); s.Width = 640; s.Height = 360; s.Fps = 10; s.CooldownMs = 3000;
+        FfmpegPipeline p = new FfmpegPipeline(s, ff, buf, true);
+        int frames = 0; bool badJpeg = false; int ended = 0; bool lastGraceful = true; bool sawRecovering = false;
+        p.Frame += delegate(byte[] f) { frames++; if (f.Length < 200 || f[0] != 0xFF || f[1] != 0xD8) badJpeg = true; };
+        p.ProcessEnded += delegate(bool g) { ended++; lastGraceful = g; };
+        p.StateChanged += delegate(string st) { if (st == "recovering") sawRecovering = true; };
+        p.Start();
+        System.Threading.Thread.Sleep(15000);
+        T.True(frames > 50, "frames received: " + frames); T.True(!badJpeg, "jpeg frames valid"); T.Eq("running", p.State, "state running");
+        T.True(Directory.Exists(buf) && Directory.GetFiles(buf, "seg_*.mp4").Length >= 1, "segments written");
+        // ฆ่า ffmpeg ด้วยมือ → ต้องเปิดใหม่เอง
+        foreach (System.Diagnostics.Process x in System.Diagnostics.Process.GetProcessesByName("ffmpeg")) { try { x.Kill(); } catch { } }
+        System.Threading.Thread.Sleep(9000);
+        T.True(sawRecovering, "went to recovering"); T.Eq("running", p.State, "recovered to running"); T.True(ended >= 1 && !lastGraceful || ended >= 2, "ProcessEnded fired for crash");
+        DateTime t0 = DateTime.UtcNow; p.Stop(); double secs = (DateTime.UtcNow - t0).TotalSeconds;
+        T.True(secs < 6, "stop took " + secs);
+        T.Eq(0, System.Diagnostics.Process.GetProcessesByName("ffmpeg").Length, "no ffmpeg left");
+        try { Directory.Delete(buf, true); } catch { }
+    }
+}
+
 static class SelfTest
 {
     public static int Run(string outFile)
@@ -287,6 +358,8 @@ static class SelfTest
         T.Run("clip recorder", ClipRecorderTests.All);
         T.Run("frames", FrameTests.All);
         T.Run("net primitives", NetPrimitivesTests.All);
+        T.Run("ffmpeg text", FfmpegTextTests.All);
+        T.Run("pipeline integration", PipelineIntegration.All);
         return T.Done(outFile);
     }
 }
