@@ -1852,7 +1852,7 @@ try {
 - `/live` ส่งส่วนที่ขึ้นต้นด้วย `--frame` มี `Content-Type: image/jpeg` และไบต์ JPEG ที่ถอดรหัสได้ตรงกับที่ `Hub.Publish`
 - ปิดเซิร์ฟเวอร์ (`Stop`) ปิดการเชื่อมต่อสดที่ค้างอยู่ด้วย ไม่ค้างเธรด
 
-- [ ] **Step 1: เขียน test `HttpServerTests`** (ครอบคลุมตาราง; เซิร์ฟเวอร์จริงบน `127.0.0.1:18787` พร้อมโฮสต์ปลอม)
+- [x] **Step 1: เขียน test `HttpServerTests`** (ครอบคลุมตาราง; เซิร์ฟเวอร์จริงบน `127.0.0.1:18787` พร้อมโฮสต์ปลอม)
 
 ```csharp
 static class HttpServerTests
@@ -2003,9 +2003,9 @@ static class HttpServerTests
 ```
 ลงทะเบียน `T.Run("http server", HttpServerTests.All);` ใน `SelfTest.Run` (ก่อน `PipelineIntegration` ถ้ามีแล้ว)
 
-- [ ] **Step 2: รัน** Expected: BUILD FAILED
+- [x] **Step 2: รัน** Expected: BUILD FAILED
 
-- [ ] **Step 3: เขียน `HttpServer.cs`**
+- [x] **Step 3: เขียน `HttpServer.cs`**
 
 ```csharp
 using System;
@@ -2219,16 +2219,16 @@ class HttpServer : IDisposable
 ```
 หมายเหตุ: `ReadHead` ใช้ `Encoding.ASCII.GetString` ทั้งก้อนซ้ำทุกรอบ (ไม่เกิน 8 KB) ยอมรับได้
 
-- [ ] **Step 4: รัน** `run-selftest.ps1` Expected: ผ่านทั้งหมด (พอร์ต 18787 ต้องว่าง)
+- [x] **Step 4: รัน** `run-selftest.ps1` Expected: ผ่านทั้งหมด (พอร์ต 18787 ต้องว่าง)
 
-- [ ] **Step 5: ผูกเซิร์ฟเวอร์ใน `--headless`** ใน `Program.cs` แทนคอมเมนต์ `// Task 10 ...` ด้วย
+- [x] **Step 5: ผูกเซิร์ฟเวอร์ใน `--headless`** ใน `Program.cs` แทนคอมเมนต์ `// Task 10 ...` ด้วย
 
 ```csharp
             HttpServer srv = new HttpServer(s, eng);
             srv.Start();
 ```
 
-- [ ] **Step 6: ต่อ `tests/integration.ps1` ส่วน HTTP** แทนคอมเมนต์ `# ---- HTTP section ----`
+- [x] **Step 6: ต่อ `tests/integration.ps1` ส่วน HTTP** แทนคอมเมนต์ `# ---- HTTP section ----`
 
 ```powershell
   $base = "http://127.0.0.1:$port"
@@ -2252,7 +2252,7 @@ class HttpServer : IDisposable
 ```
 Expected: `OK clips=...` และ `OK http`
 
-- [ ] **Step 7: Commit** (`feat(camera): http server for live, clips and rotation`)
+- [x] **Step 7: Commit** (`feat(camera): http server for live, clips and rotation`)
 
 ---
 

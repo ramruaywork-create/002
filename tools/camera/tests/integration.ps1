@@ -24,7 +24,27 @@ try {
   $old = @(Get-ChildItem "$data\buffer" -Filter 'seg_*.mp4' | Where-Object { $_.LastWriteTime -lt (Get-Date).AddSeconds(-40) })
   if ($old.Count -gt 0) { throw "stale buffer segments older than 40s: $($old.Name -join ',')" }
   "OK clips=$($files.Count): $($files.Name -join ', ')"
-  # ---- HTTP section (added in Task 10) ----
+  # ---- HTTP section ----
+  $base = "http://127.0.0.1:$port"
+  $st = Invoke-RestMethod "$base/api/status?k=$code"
+  if ($st.state -notin 'armed', 'recording') { throw "unexpected state: $($st.state)" }
+  $list = Invoke-RestMethod "$base/api/clips?k=$code&from=0&to=9999999999999"
+  if (@($list.clips).Count -ne $files.Count) { throw "API clip count ($(@($list.clips).Count)) differs from files ($($files.Count))" }
+  $c0 = @($list.clips)[0]
+  $rq = [Net.HttpWebRequest]::Create("$base/clips/$($c0.name)?k=$code"); $rq.AddRange(0, 99)
+  $resp = $rq.GetResponse()
+  if ([int]$resp.StatusCode -ne 206 -or $resp.ContentLength -ne 100) { throw "Range failed: $([int]$resp.StatusCode) len=$($resp.ContentLength)" }
+  $resp.Close()
+  try { Invoke-WebRequest "$base/api/status?k=wrong000" -UseBasicParsing | Out-Null; throw 'expected 401' } catch { if ($_.Exception.Response.StatusCode.value__ -ne 401) { throw } }
+  # real live frames
+  $tcp = New-Object Net.Sockets.TcpClient('127.0.0.1', $port); $ns = $tcp.GetStream(); $ns.ReadTimeout = 8000
+  $req = [Text.Encoding]::ASCII.GetBytes("GET /live?k=$code HTTP/1.1`r`nHost: x`r`n`r`n"); $ns.Write($req, 0, $req.Length)
+  $buf = New-Object byte[] 200000; $got = 0
+  while ($got -lt 30000) { $n = $ns.Read($buf, $got, $buf.Length - $got); if ($n -le 0) { break }; $got += $n }
+  $tcp.Close()
+  $txt = [Text.Encoding]::ASCII.GetString($buf, 0, [Math]::Min($got, 400))
+  if ($txt -notmatch 'multipart/x-mixed-replace' -or $txt -notmatch 'image/jpeg') { throw "bad /live response: $txt" }
+  "OK http (status=$($st.state) live bytes=$got)"
 } finally {
   if ($p -and -not $p.HasExited) { $p.Kill() }
   Get-Process ffmpeg -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $ff } | Stop-Process -Force

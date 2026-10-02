@@ -21,7 +21,8 @@ static class Program
         {
             CameraEngine eng = new CameraEngine(s, test);
             eng.Start();
-            // Task 10 ผูกเซิร์ฟเวอร์ HTTP ตรงนี้
+            HttpServer srv = new HttpServer(s, eng);
+            srv.Start();
             Thread.Sleep(Timeout.Infinite);
             return 0;
         }

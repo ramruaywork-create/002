@@ -347,6 +347,152 @@ static class PipelineIntegration
     }
 }
 
+static class HttpServerTests
+{
+    class FakeHost : IServerHost
+    {
+        public FrameHub hub = new FrameHub(); public int rot = -1;
+        public FrameHub Hub { get { return hub; } }
+        public string StatusJson() { return "{\"state\":\"armed\"}"; }
+        public bool SetRotation(int d) { if (d % 90 != 0 || d < 0 || d > 270) return false; rot = d; return true; }
+    }
+
+    const int Port = 18787;
+    const string K = "abcd2345";
+    static readonly System.Text.Encoding Latin1 = System.Text.Encoding.GetEncoding(28591);
+
+    // ส่งคำขอดิบแล้วอ่านจนเซิร์ฟเวอร์ปิด คืนรหัสสถานะ (0 ถ้าไม่ได้ตอบ)
+    static int Raw(string request, out string headers, out byte[] body)
+    {
+        headers = ""; body = new byte[0];
+        try
+        {
+            using (System.Net.Sockets.TcpClient c = new System.Net.Sockets.TcpClient("127.0.0.1", Port))
+            {
+                c.ReceiveTimeout = 5000;
+                System.Net.Sockets.NetworkStream ns = c.GetStream();
+                byte[] rq = Latin1.GetBytes(request); ns.Write(rq, 0, rq.Length);
+                System.IO.MemoryStream all = new System.IO.MemoryStream(); byte[] buf = new byte[8192]; int n;
+                try { while ((n = ns.Read(buf, 0, buf.Length)) > 0) all.Write(buf, 0, n); } catch (System.IO.IOException) { }
+                byte[] bytes = all.ToArray();
+                string text = Latin1.GetString(bytes);
+                int end = text.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+                if (end < 0) return 0;
+                headers = text.Substring(0, end);
+                body = new byte[bytes.Length - (end + 4)];
+                Array.Copy(bytes, end + 4, body, 0, body.Length);
+                string[] first = headers.Split(' ');
+                int code;
+                return first.Length >= 2 && int.TryParse(first[1], out code) ? code : 0;
+            }
+        }
+        catch (System.IO.IOException) { return 0; }
+        catch (System.Net.Sockets.SocketException) { return 0; }
+    }
+
+    static int Req(string method, string pathAndQuery, string extraHeaders, out string headers, out byte[] body)
+    {
+        return Raw(method + " " + pathAndQuery + " HTTP/1.1\r\nHost: x\r\n" + (extraHeaders ?? "") + "\r\n", out headers, out body);
+    }
+
+    static System.Net.Sockets.TcpClient OpenLive()
+    {
+        System.Net.Sockets.TcpClient c = new System.Net.Sockets.TcpClient("127.0.0.1", Port);
+        c.ReceiveTimeout = 3000;
+        byte[] rq = Latin1.GetBytes("GET /live?k=" + K + " HTTP/1.1\r\nHost: x\r\n\r\n");
+        c.GetStream().Write(rq, 0, rq.Length);
+        return c;
+    }
+
+    static byte[] ReadSome(System.Net.Sockets.TcpClient c, int atLeast, int ms)
+    {
+        System.IO.MemoryStream all = new System.IO.MemoryStream(); byte[] buf = new byte[8192];
+        DateTime until = DateTime.Now.AddMilliseconds(ms);
+        while (all.Length < atLeast && DateTime.Now < until)
+        {
+            try { int n = c.GetStream().Read(buf, 0, buf.Length); if (n <= 0) break; all.Write(buf, 0, n); }
+            catch (System.IO.IOException) { break; }
+        }
+        return all.ToArray();
+    }
+
+    static bool Contains(byte[] hay, byte[] needle)
+    {
+        for (int i = 0; i + needle.Length <= hay.Length; i++)
+        {
+            int j = 0; while (j < needle.Length && hay[i + j] == needle[j]) j++;
+            if (j == needle.Length) return true;
+        }
+        return false;
+    }
+
+    public static void All()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "rrqc-t-" + Guid.NewGuid().ToString("N"));
+        string dir = Path.Combine(root, "clips"); Directory.CreateDirectory(dir);
+        string clip = "motion_2026-10-02_09-00-00.mp4";
+        File.WriteAllBytes(Path.Combine(dir, clip), Latin1.GetBytes("0123456789"));
+        File.WriteAllText(Path.Combine(root, "secret.ini"), "secret");
+        Settings s = new Settings(); s.ClipDir = dir; s.Code = K; s.Port = Port; s.LocalOnly = true;
+        FakeHost host = new FakeHost();
+        HttpServer srv = new HttpServer(s, host);
+        srv.Start();
+        System.Net.Sockets.TcpClient lv = null;
+        try
+        {
+            string h; byte[] b; int c;
+            c = Req("GET", "/api/status", null, out h, out b); T.Eq(401, c, "no key = 401");
+            c = Req("GET", "/api/status?k=" + K, null, out h, out b); T.Eq(200, c, "status 200"); T.True(Latin1.GetString(b).Contains("armed"), "status body");
+            c = Req("GET", "/api/clips?k=" + K + "&from=0&to=9999999999999", null, out h, out b);
+            T.Eq(200, c, "clips 200"); T.True(Latin1.GetString(b).Contains(clip) && Latin1.GetString(b).Contains("\"size\":10"), "clips body");
+            c = Req("GET", "/api/clips?k=" + K + "&from=x&to=1", null, out h, out b); T.Eq(400, c, "clips bad params");
+            string cp = "/clips/" + clip + "?k=" + K;
+            c = Req("GET", cp, null, out h, out b); T.Eq(200, c, "clip 200"); T.Eq("0123456789", Latin1.GetString(b), "clip body");
+            c = Req("GET", cp, "Range: bytes=0-3\r\n", out h, out b);
+            T.Eq(206, c, "range 206"); T.True(h.Contains("Content-Range: bytes 0-3/10"), "content-range"); T.Eq("0123", Latin1.GetString(b), "range body");
+            c = Req("GET", cp, "Range: bytes=50-\r\n", out h, out b); T.Eq(416, c, "range unsatisfiable");
+            c = Req("GET", cp + "&dl=1", null, out h, out b); T.True(h.Contains("Content-Disposition: attachment"), "download header");
+            c = Req("GET", "/clips/..%5Csecret.ini?k=" + K, null, out h, out b); T.Eq(404, c, "traversal backslash");
+            c = Req("GET", "/clips/..%2F..%2Fx?k=" + K, null, out h, out b); T.Eq(404, c, "traversal slash");
+            c = Req("GET", "/clips/motion_2099-01-01_00-00-00.mp4?k=" + K, null, out h, out b); T.Eq(404, c, "missing clip");
+            c = Req("POST", "/api/rot?k=" + K + "&v=90", null, out h, out b); T.Eq(200, c, "rot ok"); T.Eq(90, host.rot, "host rotated");
+            c = Req("POST", "/api/rot?k=" + K + "&v=45", null, out h, out b); T.Eq(400, c, "rot invalid");
+            c = Req("GET", "/api/rot?k=" + K + "&v=90", null, out h, out b); T.Eq(405, c, "rot needs POST");
+            c = Req("OPTIONS", "/api/status", null, out h, out b); T.Eq(204, c, "options 204"); T.True(h.Contains("Access-Control-Allow-Origin: *"), "cors header");
+            c = Req("GET", "/nope?k=" + K, null, out h, out b); T.Eq(404, c, "unknown path");
+            c = Raw("GET /api/status?k=" + K + " HTTP/1.1\r\nX: " + new string('a', 9000) + "\r\n\r\n", out h, out b); T.True(c != 200, "oversized header rejected");
+
+            byte[] jpg = FrameTests.Jpg(64, 48, System.Drawing.Color.Red);
+            lv = OpenLive();
+            System.Threading.Thread.Sleep(300);
+            host.hub.Publish(jpg);
+            byte[] got = ReadSome(lv, jpg.Length + 100, 4000);
+            string gt = Latin1.GetString(got);
+            T.True(gt.Contains("multipart/x-mixed-replace") && gt.Contains("--frame") && gt.Contains("image/jpeg"), "live headers");
+            T.True(Contains(got, jpg), "live frame bytes");
+
+            System.Collections.Generic.List<System.Net.Sockets.TcpClient> extra = new System.Collections.Generic.List<System.Net.Sockets.TcpClient>();
+            for (int i = 0; i < 3; i++) extra.Add(OpenLive());
+            System.Threading.Thread.Sleep(300);
+            c = Req("GET", "/live?k=" + K, null, out h, out b); T.Eq(503, c, "5th live viewer refused");
+            foreach (System.Net.Sockets.TcpClient x in extra) x.Close();
+
+            for (int i = 0; i < 11; i++) Req("GET", "/api/status?k=wrong000", null, out h, out b);
+            c = Req("GET", "/api/status?k=" + K, null, out h, out b); T.Eq(429, c, "blocked after repeated failures");
+
+            DateTime t0 = DateTime.Now; srv.Stop();
+            ReadSome(lv, int.MaxValue, 3000);
+            T.True((DateTime.Now - t0).TotalSeconds < 3, "Stop closes live connection quickly");
+        }
+        finally
+        {
+            srv.Stop();
+            if (lv != null) lv.Close();
+            try { Directory.Delete(root, true); } catch { }
+        }
+    }
+}
+
 static class SelfTest
 {
     public static int Run(string outFile)
@@ -359,6 +505,7 @@ static class SelfTest
         T.Run("frames", FrameTests.All);
         T.Run("net primitives", NetPrimitivesTests.All);
         T.Run("ffmpeg text", FfmpegTextTests.All);
+        T.Run("http server", HttpServerTests.All);
         T.Run("pipeline integration", PipelineIntegration.All);
         return T.Done(outFile);
     }
