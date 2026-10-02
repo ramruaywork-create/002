@@ -501,7 +501,7 @@ class Settings
 - `Keep`: มี motion ในท่อน → true; motion ในท่อนถัดไป → true; motion ก่อนเริ่มท่อนภายใน cooldown → true; ก่อนเกิน cooldown → false; ไม่มี motion → false
 - `Ready(now, start, 10)` เป็น false ก่อน `start+22s` และ true ตั้งแต่ `start+22s`
 
-- [ ] **Step 1: เขียน test** (เพิ่ม `ClipRulesTests` ใน `SelfTest.cs`, ลงทะเบียนใน `Run`)
+- [x] **Step 1: เขียน test** (เพิ่ม `ClipRulesTests` ใน `SelfTest.cs`, ลงทะเบียนใน `Run`)
 
 ```csharp
 static class ClipRulesTests
@@ -537,9 +537,9 @@ static class ClipRulesTests
 }
 ```
 
-- [ ] **Step 2: รัน** Expected: BUILD FAILED
+- [x] **Step 2: รัน** Expected: BUILD FAILED
 
-- [ ] **Step 3: เขียน `Clips.cs` (ส่วนแรก)**
+- [x] **Step 3: เขียน `Clips.cs` (ส่วนแรก)**
 
 ```csharp
 using System;
@@ -595,7 +595,7 @@ static class KeepPolicy
 ```
 หมายเหตุ: `Keep` รับ `IList<DateTime>` และ `DateTime[]` เป็น `IList<DateTime>` ได้
 
-- [ ] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): clip naming and keep policy`)
+- [x] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): clip naming and keep policy`)
 
 ---
 
@@ -619,7 +619,7 @@ static class KeepPolicy
 - `Tick`: ท่อนที่พร้อมและมี motion → ย้ายไป ClipDir ชื่อ `motion_*.mp4` และยิง `ClipSaved`; ท่อนที่พร้อมแต่ไม่มี motion → ถูกลบ; ท่อนที่ยังไม่พร้อมไม่ถูกแตะ; ไฟล์ขนาด 0 ถูกลบ
 - `DropLatestSegment` ลบท่อนล่าสุด (ชื่อใหม่สุด) ในโฟลเดอร์พักเท่านั้น
 
-- [ ] **Step 1: เขียน test** (`ClipStoreTests`, `ClipRecorderTests`)
+- [x] **Step 1: เขียน test** (`ClipStoreTests`, `ClipRecorderTests`)
 
 ```csharp
 static class ClipStoreTests
@@ -699,9 +699,9 @@ static class ClipRecorderTests
 ```
 ลงทะเบียน `T.Run("clip store", ClipStoreTests.All); T.Run("clip recorder", ClipRecorderTests.All);` ใน `SelfTest.Run` (เวลา 09:00 วันที่ 2 เก่ากว่า 1 วัน ณ 09:30 วันที่ 3 จึงถูกลบ; 10:00 ยังไม่เก่ากว่า จึงอยู่)
 
-- [ ] **Step 2: รัน** Expected: BUILD FAILED
+- [x] **Step 2: รัน** Expected: BUILD FAILED
 
-- [ ] **Step 3: เพิ่มโค้ดต่อท้าย `Clips.cs`**
+- [x] **Step 3: เพิ่มโค้ดต่อท้าย `Clips.cs`**
 
 ```csharp
 class ClipInfo { public string Name; public long StartMs, EndMs, Size; }
@@ -815,7 +815,7 @@ class ClipRecorder
 }
 ```
 
-- [ ] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): clip store, retention and recorder decisions`)
+- [x] **Step 4: รัน** Expected: ผ่านทั้งหมด **Step 5: Commit** (`feat(camera): clip store, retention and recorder decisions`)
 
 ---
 
