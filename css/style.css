@@ -73,6 +73,7 @@ body { margin: 0; padding: 0; background-color: var(--argon-bg); color: var(--ar
 .dropdown-container { display: flex; flex-direction: column; }
 .nav-group-title { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #8898aa; padding: 16px 14px 6px 15px; }
 .nav-group-title:first-of-type { padding-top: 6px; }
+a.tab-btn.nav-link { text-decoration: none; box-sizing: border-box; }
 .sub-menu {
     display: none;
     flex-direction: column;

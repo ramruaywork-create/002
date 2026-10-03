@@ -320,6 +320,50 @@ static class FfmpegTextTests
     }
 }
 
+static class InputPlanTests
+{
+    // ผลจริงของ ffmpeg -list_options จากกล้อง EMEET SmartCam C60E 4K (ต่ำสุด 30 fps ทุกโหมด จึงเปิดที่ 15 fps ไม่ได้)
+    const string C60E =
+        "[in#0 @ 00000200ca8e3100] DirectShow video device options (from video devices)\r\n" +
+        "[in#0 @ 00000200ca8e3100]  Pin \"Capture\" (alternative pin name \"0\")\r\n" +
+        "[in#0 @ 00000200ca8e3100]   vcodec=mjpeg  min s=3840x2160 fps=30 max s=3840x2160 fps=30\r\n" +
+        "[in#0 @ 00000200ca8e3100]   vcodec=mjpeg  min s=3840x2160 fps=30 max s=3840x2160 fps=30 (pc, bt470bg/bt709/unknown, center)\r\n" +
+        "[in#0 @ 00000200ca8e3100]   vcodec=mjpeg  min s=2560x1440 fps=30 max s=2560x1440 fps=30\r\n" +
+        "[in#0 @ 00000200ca8e3100]   vcodec=mjpeg  min s=1920x1080 fps=30 max s=1920x1080 fps=60.0002\r\n" +
+        "[in#0 @ 00000200ca8e3100]   vcodec=mjpeg  min s=1920x1080 fps=30 max s=1920x1080 fps=60.0002 (pc, bt470bg/bt709/unknown, center)\r\n" +
+        "[in#0 @ 00000200ca8e3100]   vcodec=mjpeg  min s=1280x720 fps=30 max s=1280x720 fps=60.0002\r\n" +
+        "[in#0 @ 00000200ca8e3100]   vcodec=mjpeg  min s=640x480 fps=30 max s=640x480 fps=30\r\n" +
+        "[in#0 @ 00000200ca8e3100]   pixel_format=yuyv422  min s=640x480 fps=30 max s=640x480 fps=30\r\n" +
+        "[in#0 @ 00000200ca8e3100]   pixel_format=yuyv422  min s=640x480 fps=30 max s=640x480 fps=30 (tv, bt470bg/bt709/unknown, topleft)\r\n";
+
+    public static void All()
+    {
+        System.Collections.Generic.List<CameraMode> m = FfmpegText.ParseModes(C60E);
+        T.Eq(6, m.Count, "distinct modes parsed (duplicates with colour info merged)");
+        T.Eq(30.0, m[2].MinFps, "min fps of 1080p mode"); T.Eq(1920, m[2].Width, "1080p width");
+
+        InputPlan p = FfmpegPipeline.PlanInput(m, 1920, 1080, 15, true);
+        T.Eq(1920, p.Width, "1080p kept"); T.Eq(1080, p.Height, "1080p kept h"); T.Eq(30, p.Fps, "15 raised to camera minimum 30");
+        T.True(p.Mjpeg, "mjpeg chosen"); T.True(p.Note != null && p.Note.Contains("30"), "note explains change");
+
+        p = FfmpegPipeline.PlanInput(m, 1920, 1080, 30, true); T.Eq(30, p.Fps, "30 stays"); T.True(p.Note == null, "no note when unchanged");
+        p = FfmpegPipeline.PlanInput(m, 1920, 1080, 60, true); T.Eq(60, p.Fps, "60 allowed (max 60.0002)");
+        p = FfmpegPipeline.PlanInput(m, 1920, 1080, 90, true); T.Eq(60, p.Fps, "90 lowered to max");
+        p = FfmpegPipeline.PlanInput(m, 2560, 1440, 60, true); T.Eq(30, p.Fps, "1440p max is 30");
+        p = FfmpegPipeline.PlanInput(m, 1300, 730, 30, true); T.Eq(1280, p.Width, "unsupported size -> nearest 1280x720"); T.Eq(720, p.Height, "nearest h");
+        p = FfmpegPipeline.PlanInput(m, 640, 480, 30, false); T.True(!p.Mjpeg, "raw preferred when asked and available");
+        p = FfmpegPipeline.PlanInput(m, 1920, 1080, 30, false); T.True(p.Mjpeg, "falls back to mjpeg when no raw mode at that size");
+        p = FfmpegPipeline.PlanInput(new System.Collections.Generic.List<CameraMode>(), 1920, 1080, 15, true);
+        T.Eq(1920, p.Width, "no mode info: requested size"); T.Eq(15, p.Fps, "no mode info: requested fps"); T.True(p.Mjpeg, "no mode info: preferred codec");
+
+        Settings s = new Settings(); s.CameraName = "Cam";
+        InputPlan q = new InputPlan(); q.Width = 1280; q.Height = 720; q.Fps = 30; q.Mjpeg = true;
+        string a = FfmpegPipeline.BuildArgs(s, @"C:\b", false, q);
+        T.True(a.Contains("-video_size 1280x720") && a.Contains("-framerate 30") && a.Contains("-vcodec mjpeg"), "BuildArgs uses plan");
+        T.True(a.Contains("-g 60"), "GOP follows plan fps");
+    }
+}
+
 static class PipelineIntegration
 {
     public static void All()
@@ -506,6 +550,7 @@ static class SelfTest
         T.Run("frames", FrameTests.All);
         T.Run("net primitives", NetPrimitivesTests.All);
         T.Run("ffmpeg text", FfmpegTextTests.All);
+        T.Run("input plan", InputPlanTests.All);
         T.Run("http server", HttpServerTests.All);
         T.Run("pipeline integration", PipelineIntegration.All);
         return T.Done(outFile);

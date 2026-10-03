@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>คู่มือการใช้งานระบบ RRQC</title>
+<style>
+  @page { size: A4; margin: 15mm 15mm 17mm 15mm; @bottom-center { content: "คู่มือระบบ RRQC · หน้า " counter(page); font: 9pt "Leelawadee UI", Tahoma, sans-serif; color: #8898aa; } }
+  @page :first { margin: 0; @bottom-center { content: none; } }
+  :root { --ink: #32325d; --body: #44506a; --primary: #5e72e4; --primary2: #825ee4; --muted: #8898aa; --line: #e3e8f2; --soft: #f4f6fd; --ok: #1c8a5f; --warn: #d66a22; --bad: #c41f42; }
+  * { box-sizing: border-box; }
+  html { font-family: "Leelawadee UI", Tahoma, "Segoe UI", sans-serif; color: var(--body); font-size: 10pt; line-height: 1.55; }
+  body { margin: 0; }
+  h1, h2, h3 { color: var(--ink); line-height: 1.3; margin: 0; }
+  h1 { font-size: 20pt; padding-bottom: 6px; border-bottom: 3px solid var(--primary); margin-bottom: 10px; }
+  h2 { font-size: 13.5pt; margin: 16px 0 6px; }
+  h3 { font-size: 11.5pt; margin: 14px 0 5px; color: var(--primary); }
+  p { margin: 6px 0; }
+  .chapter { page-break-before: always; }
+  .chapter.cont { page-break-before: auto; margin-top: 30px; }
+  section.compact { font-size: 9.5pt; line-height: 1.5; }
+  section.compact .steps > li { padding-bottom: 5px; }
+  section.compact table { font-size: 9.3pt; }
+  section.compact td, section.compact th { padding: 4px 8px; }
+  section.compact h2 { margin: 12px 0 5px; }
+  h1, h2, h3 { break-after: avoid; }
+  .cover { page-break-after: always; height: 297mm; padding: 0; background: linear-gradient(160deg, #32325d 0%, #5e72e4 62%, #825ee4 100%); color: #fff; display: flex; flex-direction: column; justify-content: center; padding: 0 22mm; }
+  .cover .tag { font-size: 12pt; letter-spacing: .06em; opacity: .85; }
+  .cover h1 { color: #fff; border: 0; font-size: 36pt; margin: 8px 0 6px; padding: 0; }
+  .cover .sub { font-size: 15pt; opacity: .95; margin-bottom: 36mm; }
+  .cover .meta { font-size: 10.5pt; opacity: .8; border-top: 1px solid rgba(255,255,255,.35); padding-top: 10px; }
+  .toc { columns: 1; list-style: none; padding: 0; margin: 8px 0; }
+  .toc li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  .toc b { color: var(--primary); min-width: 24px; }
+  .toc span { color: var(--muted); font-size: 9.5pt; margin-left: auto; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: #fff; margin: 10px 0; break-inside: avoid; }
+  .soft { background: var(--soft); }
+  .steps { list-style: none; counter-reset: s; padding: 0; margin: 8px 0; }
+  .steps > li { counter-increment: s; position: relative; padding: 4px 0 8px 38px; break-inside: avoid; }
+  .steps > li::before { content: counter(s); position: absolute; left: 0; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary2)); color: #fff; font-weight: 700; text-align: center; line-height: 26px; font-size: 10.5pt; }
+  .tip, .warn, .note { border-left: 4px solid; border-radius: 6px; padding: 8px 12px; margin: 10px 0; break-inside: avoid; font-size: 10pt; }
+  .tip { background: #eaf8f1; border-color: var(--ok); }
+  .warn { background: #fdf0e8; border-color: var(--warn); }
+  .note { background: #eef1fd; border-color: var(--primary); }
+  .tip b:first-child, .warn b:first-child, .note b:first-child { margin-right: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.8pt; break-inside: avoid; }
+  th { background: var(--primary); color: #fff; text-align: left; padding: 6px 9px; font-weight: 600; }
+  td { padding: 6px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbff; }
+  code, .kbd { font-family: Consolas, "Courier New", monospace; background: #eef1fd; color: #3b4cb8; padding: 1px 6px; border-radius: 4px; font-size: 9.6pt; }
+  .kbd { background: #fff; border: 1px solid #c9d1e6; border-bottom-width: 2px; color: var(--ink); }
+  .pill { display: inline-block; padding: 1px 10px; border-radius: 50px; font-size: 9pt; font-weight: 700; }
+  .p-green { background: #dff5ea; color: var(--ok); } .p-orange { background: #ffeadb; color: var(--warn); } .p-red { background: #fde4ea; color: var(--bad); } .p-blue { background: #e4e9fd; color: #3b4cb8; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .mini { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; break-inside: avoid; }
+  .mini b { color: var(--ink); display: block; margin-bottom: 2px; }
+  .path { background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-family: Consolas, monospace; font-size: 9.6pt; color: var(--ink); word-break: break-all; margin: 6px 0; }
+  .menu { display: inline-block; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px; color: var(--primary); font-weight: 600; }
+  svg { display: block; margin: 8px auto; max-width: 100%; }
+  ul { margin: 4px 0 4px 18px; padding: 0; } li { margin: 2px 0; }
+  .small { font-size: 9.3pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============ ปก ============ -->
+<section class="cover">
+  <div class="tag">บริษัท ร่ำรวย จำกัด · RUM RUAY CO., LTD.</div>
+  <h1>คู่มือการใช้งานระบบ RRQC</h1>
+  <div class="sub">ระบบตรวจสอบสินค้า (QC) · ทำ ฟวย · ประวัติการสแกน · กล้อง CCTV</div>
+  <div class="meta">ฉบับวันที่ 2 ตุลาคม 2569<br>ครอบคลุม: หน้าเว็บทุกเมนู · โปรแกรม RRQC Scanner · โปรแกรม RRQC Camera · การดูแลระบบ</div>
+</section>
+
+<!-- ============ สารบัญ + ภาพรวม ============ -->
+<section>
+  <h1>สารบัญและภาพรวมระบบ</h1>
+  <ul class="toc">
+    <li><b>1</b> เริ่มต้นใช้งานและรู้จักเมนู <span>หน้า 3</span></li>
+    <li><b>2</b> ตรวจสอบสินค้า (QC Scan) <span>หน้า 4</span></li>
+    <li><b>3</b> รายการออเดอร์ (Orders) <span>หน้า 4</span></li>
+    <li><b>4</b> ทำ ฟวย (อัปโหลด Excel · สรุป · เช็ค) <span>หน้า 5</span></li>
+    <li><b>5</b> จัดการสินค้า (Products) <span>หน้า 6</span></li>
+    <li><b>6</b> สินค้าทดแทน และ ตัดสินค้าออกจากออเดอร์ <span>หน้า 6</span></li>
+    <li><b>7</b> ประวัติการยิงสแกนเนอร์ และโปรแกรม RRQC Scanner <span>หน้า 7</span></li>
+    <li><b>8</b> กล้อง CCTV และโปรแกรม RRQC Camera <span>หน้า 8</span></li>
+    <li><b>9</b> แก้ปัญหาที่พบบ่อย <span>หน้า 9–10</span></li>
+    <li><b>10</b> สำหรับผู้ดูแลระบบ: ข้อมูล ความปลอดภัย <span>หน้า 11</span></li>
+  </ul>
+
+  <h2>ระบบนี้ประกอบด้วยอะไรบ้าง</h2>
+  <svg viewBox="0 0 700 300" width="680" height="290" role="img" aria-label="แผนภาพส่วนประกอบของระบบ">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5e72e4"/><stop offset="1" stop-color="#825ee4"/></linearGradient></defs>
+    <rect x="255" y="20" width="190" height="64" rx="12" fill="url(#g)"/>
+    <text x="350" y="48" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">ฐานข้อมูล Supabase</text>
+    <text x="350" y="68" fill="#e4e9fd" font-size="11" text-anchor="middle">ออเดอร์ · สินค้า · ประวัติการสแกน</text>
+
+    <rect x="20" y="130" width="190" height="70" rx="12" fill="#fff" stroke="#5e72e4" stroke-width="2"/>
+    <text x="115" y="158" fill="#32325d" font-size="14" font-weight="700" text-anchor="middle">หน้าเว็บ RRQC</text>
+    <text x="115" y="178" fill="#44506a" font-size="11" text-anchor="middle">QC · ออเดอร์ · ทำ ฟวย · สินค้า</text>
+    <text x="115" y="192" fill="#44506a" font-size="11" text-anchor="middle">ดูกล้อง · ประวัติการสแกน</text>
+
+    <rect x="255" y="130" width="190" height="70" rx="12" fill="#fff" stroke="#1c8a5f" stroke-width="2"/>
+    <text x="350" y="158" fill="#32325d" font-size="14" font-weight="700" text-anchor="middle">RRQC Scanner</text>
+    <text x="350" y="178" fill="#44506a" font-size="11" text-anchor="middle">บันทึกทุกครั้งที่ยิงสแกนเนอร์</text>
+    <text x="350" y="192" fill="#44506a" font-size="11" text-anchor="middle">(ทุกเครื่องที่ติดตั้ง)</text>
+
+    <rect x="490" y="130" width="190" height="70" rx="12" fill="#fff" stroke="#d66a22" stroke-width="2"/>
+    <text x="585" y="158" fill="#32325d" font-size="14" font-weight="700" text-anchor="middle">RRQC Camera</text>
+    <text x="585" y="178" fill="#44506a" font-size="11" text-anchor="middle">เปิดกล้อง · จับเคลื่อนไหว</text>
+    <text x="585" y="192" fill="#44506a" font-size="11" text-anchor="middle">บันทึกคลิป (คอมเครื่องหลัก)</text>
+
+    <rect x="490" y="240" width="190" height="44" rx="10" fill="#f4f6fd" stroke="#c9d1e6"/>
+    <text x="585" y="267" fill="#44506a" font-size="12" text-anchor="middle">กล้อง EMEET (USB)</text>
+
+    <path d="M115 130 C115 100 250 70 255 62" stroke="#5e72e4" stroke-width="2" fill="none"/>
+    <path d="M350 130 L350 84" stroke="#1c8a5f" stroke-width="2" fill="none"/>
+    <path d="M520 200 L520 226 L115 226 L115 202" stroke="#d66a22" stroke-width="2" stroke-dasharray="6 4" fill="none"/>
+    <text x="318" y="246" fill="#d66a22" font-size="11" text-anchor="middle">เว็บดึงภาพสดและคลิปจาก RRQC Camera ผ่าน Wi-Fi</text>
+    <path d="M585 240 L585 200" stroke="#d66a22" stroke-width="2" fill="none"/>
+  </svg>
+  <div class="grid3">
+    <div class="mini"><b>หน้าเว็บ</b>ใช้งานประจำวันทั้งหมด เปิดบนคอมหรือมือถือ ข้อมูลเก็บที่ Supabase จึงเห็นตรงกันทุกเครื่อง</div>
+    <div class="mini"><b>RRQC Scanner</b>โปรแกรมเล็กๆ บนคอมที่ต่อเครื่องสแกน จดทุกครั้งที่ยิงรหัส TH… / SPX… ไม่ว่าจะเปิดโปรแกรมไหนอยู่</div>
+    <div class="mini"><b>RRQC Camera</b>โปรแกรมบนคอมเครื่องเดียวที่เสียบกล้อง เป็นที่เก็บคลิป เว็บเป็นแค่ที่ดู</div>
+  </div>
+</section>
+
+<!-- ============ 1 เริ่มต้น ============ -->
+<section class="chapter">
+  <h1>1 · เริ่มต้นใช้งานและรู้จักเมนู</h1>
+
+  <h2>เปิดหน้าเว็บ</h2>
+  <p>หน้าเว็บต้องเปิดผ่านเซิร์ฟเวอร์เล็กๆ ในเครื่อง (ไม่ใช่ดับเบิลคลิกไฟล์ <code>index.html</code> ตรงๆ) เพราะส่วนกล้องและการเลือกโฟลเดอร์ต้องการที่อยู่แบบ <code>http://</code></p>
+  <ol class="steps">
+    <li>ติดตั้ง Python ครั้งเดียว (<code>python.org</code> ติ๊ก "Add python.exe to PATH")</li>
+    <li>ดับเบิลคลิก <code>tools/cctv/start-cctv.bat</code> โปรแกรมจะเปิดเซิร์ฟเวอร์พอร์ต 5510 แล้วเปิด Chrome ให้เอง</li>
+    <li>หรือเปิดเองที่ <code>http://localhost:5510/index.html</code> (ถ้ารัน <code>python -m http.server 5510</code> ในโฟลเดอร์โปรเจกต์)</li>
+  </ol>
+  <div class="note"><b>รู้ไว้:</b> ตอนเปิดหน้า จะมีวงกลมหมุน "กำลังโหลดข้อมูล..." แล้วขึ้นป้ายสั้นๆ มุมจอ <span class="pill p-green">✅ โหลดข้อมูลเสร็จแล้ว พร้อมใช้งาน</span> เมื่อโหลดเสร็จ ถ้าขึ้น <span class="pill p-red">❌ โหลดข้อมูลไม่สำเร็จ</span> แปลว่าติดต่อฐานข้อมูลไม่ได้ (ดูบทที่ 9)</div>
+
+  <h2>เมนูด้านซ้าย (แบ่งเป็น 3 หมวด)</h2>
+  <table>
+    <tr><th style="width:28%">หมวด</th><th style="width:30%">เมนู</th><th>ใช้ทำอะไร</th></tr>
+    <tr><td rowspan="3"><b>งานตรวจสินค้า</b></td><td>🔍 ตรวจสอบสินค้า (QC Scan)</td><td>ยิง Tracking แล้วยิงสินค้าตรวจทีละชิ้นจนครบ</td></tr>
+    <tr><td>📋 รายการออเดอร์ (Orders)</td><td>ดู/ค้นหาออเดอร์ทั้งหมด ยกเลิกสถานะ QC</td></tr>
+    <tr><td>📤 ทำ ฟวย</td><td>อัปโหลด Excel แล้วสรุป/เช็ค ค้าง-เจอ-หาย-ส่ง</td></tr>
+    <tr><td rowspan="2"><b>จัดการข้อมูล</b></td><td>📦 จัดการสินค้า (Products)</td><td>รายการสินค้าหลัก (แบรนด์ · SKU · บาร์โค้ด) นำเข้าจาก Excel ได้</td></tr>
+    <tr><td>🔄 สินค้าทดแทน (Substitutes)</td><td>เมนูย่อย: เปลี่ยนสินค้าทดแทน / ตัดสินค้าออกจากออเดอร์</td></tr>
+    <tr><td rowspan="2"><b>ประวัติ &amp; กล้อง</b></td><td>🧾 ประวัติการยิงสแกนเนอร์</td><td>ดูว่ายิงอะไร เมื่อไร จากเครื่องไหน</td></tr>
+    <tr><td>📹 กล้อง CCTV</td><td>ดูภาพสด / ย้อนหลังจากโปรแกรม RRQC Camera</td></tr>
+  </table>
+
+  <h2>ของที่ใช้ได้ทุกหน้า</h2>
+  <div class="grid2">
+    <div class="mini"><b>🔊 ระดับเสียงแจ้งเตือน QC</b>แถบเลื่อนมุมล่างของเมนูซ้าย ปุ่ม ▶ ใช้ทดสอบเสียง เสียงแยก 3 แบบ: สแกนถูก · ผิด/ซ้ำ · ครบออเดอร์</div>
+    <div class="mini"><b>📷 ปุ่มกล้องข้างช่องสแกน</b>บนมือถือ กดแล้วใช้กล้องมือถืออ่านบาร์โค้ด/QR แทนเครื่องสแกน</div>
+    <div class="mini"><b>ช่องสแกน</b>เครื่องสแกนทำงานเหมือนคีย์บอร์ด ยิงแล้วเติมข้อความตามด้วย Enter เอง ช่องที่มีเคอร์เซอร์อยู่จะรับค่า</div>
+    <div class="mini"><b>ข้อความแจ้งเตือน</b>กล่องแจ้งผลสีเขียว/แดงด้านบนหน้า หายเองใน 4 วินาที ส่วนการลบ/ยกเลิก จะมีกล่องถามยืนยันก่อนเสมอ</div>
+  </div>
+</section>
+
+<!-- ============ 2 QC ============ -->
+<section class="chapter">
+  <h1>2 · ตรวจสอบสินค้า (QC Scan)</h1>
+  <p>ใช้ตรวจว่าของในออเดอร์ตรงกับที่ต้องส่งหรือไม่ ก่อนแพ็ค</p>
+  <ol class="steps">
+    <li><b>ยิง Tracking No.</b> ที่ช่องบน (หรือพิมพ์แล้วกด <span class="kbd">Enter</span>) ระบบจะเปิดรายการสินค้าในออเดอร์ พร้อมป้าย "สแกนแล้ว 0 / N ชิ้น"</li>
+    <li><b>ยิงสินค้าทีละชิ้น</b> ด้วยบาร์โค้ดหรือ SKU ระบบรู้ว่าบาร์โค้ด (GTIN) คือ SKU ไหนจากหน้า "จัดการสินค้า" แล้วนับให้</li>
+    <li>เมื่อครบทุกชิ้น ออเดอร์เปลี่ยนเป็น <span class="pill p-green">QC แล้ว</span> อัตโนมัติ มีเสียงครบออเดอร์ แล้วหน้าจอเคลียร์พร้อมออเดอร์ถัดไป</li>
+  </ol>
+
+  <h2>ข้อความที่อาจเจอ</h2>
+  <table>
+    <tr><th style="width:42%">ข้อความ</th><th>ความหมาย / ต้องทำอะไร</th></tr>
+    <tr><td>❌ ไม่พบข้อมูล Tracking No. นี้ในระบบ</td><td>ออเดอร์นี้ยังไม่ถูกนำเข้า ให้ไปอัปโหลดที่หน้า "ทำ ฟวย" หรือตรวจเลขที่ยิง</td></tr>
+    <tr><td>⚠️ ออเดอร์ … ผ่าน QC ไปแล้วเมื่อ …</td><td>ตรวจไปแล้ว ถ้าต้องตรวจใหม่ ให้ไปหน้า Orders กด "🔄 ยกเลิก" ที่ออเดอร์นั้นก่อน</td></tr>
+    <tr><td>❌ สินค้า SKU/บาร์โค้ด [..] ไม่อยู่ในออเดอร์นี้!</td><td>หยิบของผิด หรือสินค้านี้ถูกเปลี่ยนทดแทน (ดูบทที่ 6) เสียงเตือนผิดดังขึ้น</td></tr>
+    <tr><td>⚠️ สินค้า SKU [..] ครบจำนวนแล้ว!</td><td>ยิงเกินจำนวนที่สั่ง ตรวจว่าหยิบเกินหรือยิงซ้ำ</td></tr>
+    <tr><td>👍 สแกน … สำเร็จ (1/2)</td><td>ถูกต้อง ยิงต่อ</td></tr>
+  </table>
+
+  <h2>โหมด "ยิงผ่าน (ข้าม SKU)"</h2>
+  <p>ติ๊กช่อง <b>ยิงผ่าน (ข้าม SKU)</b> ที่มุมขวาบนของหน้า เมื่อยิง Tracking ออเดอร์จะผ่าน QC ทันทีโดยไม่ต้องยิงสินค้าทีละชิ้น (บันทึกสถานะเป็น "ไม่ได้ตรวจ" เพื่อแยกจากที่ตรวจจริง) เครื่องจำค่าที่ติ๊กไว้</p>
+  <div class="warn"><b>ระวัง:</b> โหมดนี้ข้ามการตรวจของจริงทั้งหมด ใช้เฉพาะเมื่อมั่นใจ และอย่าลืมปิดเมื่อกลับมาตรวจตามปกติ</div>
+</section>
+
+<!-- ============ 3 Orders ============ -->
+<section class="chapter cont">
+  <h1>3 · รายการออเดอร์ (Orders)</h1>
+  <p>แสดงออเดอร์ทั้งหมดในระบบ คอลัมน์: Tracking No. · รายการสินค้า (จำนวน) · สถานะ QC · เวลาที่ QC · จัดการ</p>
+  <div class="grid2">
+    <div class="mini"><b>🔍 ค้นหา</b>พิมพ์หรือยิง Tracking No. หรือ SKU ในช่องค้นหา ผลกรองทันที</div>
+    <div class="mini"><b>📋 หลายรายการ</b>กดแล้ววาง Tracking หลายเลข (บรรทัดละเลข สูงสุด 3,000 ตัวอักษร) เพื่อค้นหาพร้อมกันทีเดียว</div>
+  </div>
+  <h2>สถานะและปุ่มจัดการ</h2>
+  <table>
+    <tr><th style="width:25%">สถานะ</th><th>ความหมาย</th></tr>
+    <tr><td><span class="pill p-orange">รอ QC</span></td><td>ยังไม่ได้ตรวจ</td></tr>
+    <tr><td><span class="pill p-green">QC แล้ว</span></td><td>ตรวจแล้ว แสดงเวลาที่ตรวจ ปุ่ม <b>🔄 ยกเลิก</b> ย้อนกลับเป็น "รอ QC" (มีกล่องถามยืนยัน)</td></tr>
+  </table>
+  <p>รายการยาวจะแบ่งหน้า ใช้ปุ่มเลขหน้าด้านล่างตาราง</p>
+  <div class="tip"><b>เคล็ดลับ:</b> ตรวจซ้ำออเดอร์ที่ผ่านไปแล้วไม่ได้โดยตรง ต้องยกเลิกที่หน้านี้ก่อน เพื่อกันการยิงซ้ำโดยไม่ตั้งใจ</div>
+</section>
+
+<!-- ============ 4 ฟวย ============ -->
+<section class="chapter">
+  <h1>4 · ทำ ฟวย</h1>
+  <p>หน้านี้ใช้นำเข้าไฟล์ Excel ประจำวัน แล้วดูสรุปว่าอะไรค้าง/เจอ/หาย/ส่งแล้ว และเช็คของที่หาเจอ</p>
+
+  <h2>A · อัปโหลดไฟล์</h2>
+  <ol class="steps">
+    <li>กด <b>เลือกไฟล์</b> เลือก <code>.xlsx</code> หรือ <code>.xls</code> ตัวอย่างข้อมูลจะแสดงในตารางด้านล่าง</li>
+    <li>กด <b>⬆️ อัปโหลด</b> แล้วกดยืนยัน ระบบ <b>แทนที่ข้อมูล ฟวย เดิมทั้งหมด</b> ด้วยข้อมูลในไฟล์ และ<b>แทนที่รายการออเดอร์ทั้งหมด</b>ในหน้า Orders ด้วยข้อมูลจากไฟล์เดียวกัน</li>
+  </ol>
+  <div class="warn"><b>สำคัญ:</b> อัปโหลดแล้วออเดอร์เดิมที่ไม่อยู่ในไฟล์จะหายไปจากระบบ ทำก่อนเริ่มงานรอบใหม่ ไม่ใช่ระหว่างตรวจ</div>
+
+  <h2>B · อ่านกล่องสรุป</h2>
+  <p>กล่องสรุปมี 3 แถว ตามหมวด <b>วิกฤติ · ยิง · แฟลช</b> แต่ละแถวมีช่อง:</p>
+  <table>
+    <tr><th style="width:24%">ช่อง</th><th>ความหมาย</th></tr>
+    <tr><td><b>… ออกได้</b></td><td>จำนวนทั้งหมดของหมวดนั้นในไฟล์ (ตัวเลขดิบ)</td></tr>
+    <tr><td><span class="pill p-green">เจอ</span></td><td>รายการที่เช็คแล้ว (ยังไม่ส่ง)</td></tr>
+    <tr><td><span class="pill p-red">หาย</span></td><td>ยังไม่ได้เช็ค (ยังไม่ส่ง) เจอ + หาย = ค้างรวม</td></tr>
+    <tr><td><span class="pill p-blue">ส่ง</span></td><td>ออเดอร์ที่ <b>ผ่าน QC แล้ว</b> (ถือว่าส่งออกไปแล้ว) นับเฉพาะช่องนี้ ไม่ถูกนับซ้ำใน เจอ/หาย/ค้าง</td></tr>
+    <tr><td><span class="pill p-orange">ค้าง</span></td><td>ที่ยังไม่ส่งทั้งหมด (เจอ + หาย)</td></tr>
+  </table>
+  <p>ทุกช่องกดได้ ตารางข้างล่างจะกรองและสลับไปคอลัมน์หมวดนั้น แถวที่ "เจอ" แล้วมีพื้นหลังจางๆ ตามสีหมวด (ค้าง ว = แดง · ค้าง ย = ส้ม · วิกฤติ = ม่วง · ยิง = ฟ้า · แฟลช = เหลือง)</p>
+
+  <h2>C · เช็ครายการที่หาเจอ</h2>
+  <ol class="steps">
+    <li>ยิงหรือพิมพ์ Tracking ที่ช่อง <b>"สแกน หรือกรอก Tracking No. เพื่อเช็ค"</b> แล้ว <span class="kbd">Enter</span></li>
+    <li>ระบบแจ้งว่าเป็นของหมวดไหน (ใช้สีตามหมวด ค้างข้อความ 5 วินาที) ถ้าเลขนั้นไม่อยู่ในออเดอร์จะไม่บันทึก</li>
+    <li>ปุ่ม <b>✅ ดูรายการที่เช็คแล้วทั้งหมด (N)</b> เปิดรายการที่เช็คไปแล้ว</li>
+    <li>ปุ่ม <b>🔄 รีเซ็ต</b> ล้างรายการที่เช็คทั้งหมดเพื่อเริ่มรอบใหม่ (มีกล่องถามยืนยัน ย้อนกลับไม่ได้)</li>
+  </ol>
+  <div class="tip"><b>เคล็ดลับ:</b> ออเดอร์ที่ผ่าน QC แล้วจะมีป้าย ✅ ส่งแล้ว ในตารางด้านล่าง และถูกตัดออกจาก เจอ/หาย/ค้าง ให้เอง ดังนั้นควรตรวจ QC ในหน้า "ตรวจสอบสินค้า" ให้เรียบร้อยก่อนมาดูสรุป</div>
+</section>
+
+<!-- ============ 5 Products ============ -->
+<section class="chapter compact">
+  <h1>5 · จัดการสินค้า (Products)</h1>
+  <p>เป็นรายการสินค้าหลัก ใช้จับคู่ "บาร์โค้ด" กับ "SKU" ตอน QC และแสดงชื่อแบรนด์ในตาราง</p>
+
+  <h2>เพิ่ม / แก้ / ลบทีละรายการ</h2>
+  <ul>
+    <li>กรอก <b>แบรนด์/หมวดหมู่</b>, <b>SKU Merchant</b> (จำเป็น), <b>GTIN / บาร์โค้ด</b> (ยิงด้วยเครื่องสแกนได้) แล้วกด <b>➕ เพิ่มสินค้า</b></li>
+    <li>ในตารางด้านล่าง กดปุ่ม <b>✏️ แก้ไข</b> ที่แถว ข้อมูลจะขึ้นด้านบนให้แก้ แล้วกด <b>💾 บันทึกการแก้ไข</b> หรือ <b>✖️ ยกเลิก</b></li>
+    <li>ปุ่ม <b>🗑️ ลบ</b> ลบแถวนั้น (ถามยืนยันก่อน) ช่องค้นหาด้านบนตารางหาได้ทั้งแบรนด์ SKU และ GTIN</li>
+  </ul>
+
+  <h2>นำเข้าสินค้าจาก Excel</h2>
+  <ol class="steps">
+    <li>เลือกไฟล์ <code>.xlsx/.xls</code> (เลือกได้หลายไฟล์พร้อมกัน)</li>
+    <li>เลือกว่าคอลัมน์ไหนคือ <b>SKU Merchant</b> (จำเป็น), <b>แบรนด์/หมวดหมู่</b>, <b>GTIN / บาร์โค้ด</b> ตัวอย่างในตารางจะบอกว่าแถวไหน "จะนำเข้า"</li>
+    <li>กด <b>🗑️⬆️ ลบทั้งหมด แล้วนำเข้าใหม่</b> แล้วยืนยัน</li>
+  </ol>
+  <div class="warn"><b>อันตราย:</b> ปุ่มนี้ <b>ลบสินค้าเดิมทุกรายการ</b> แล้วใส่ข้อมูลจากไฟล์แทนทั้งหมด ย้อนกลับไม่ได้ ต้องแน่ใจว่าไฟล์มีสินค้าครบ (ระบบมีสินค้ามากกว่า 27,000 รายการ) ถ้าอยากแค่เพิ่ม ให้รวมของเดิมไว้ในไฟล์ หรือเพิ่มทีละรายการ</div>
+</section>
+
+<!-- ============ 6 Substitutes ============ -->
+<section class="chapter cont compact">
+  <h1>6 · สินค้าทดแทน และ ตัดสินค้าออกจากออเดอร์</h1>
+  <p>ใช้เมื่อของจริงที่ส่งไม่ตรงกับออเดอร์ เพื่อให้ QC ยิงผ่านได้โดยไม่ต้องแก้ไฟล์ออเดอร์ เมนูอยู่ใต้ <span class="menu">🔄 สินค้าทดแทน (Substitutes)</span> กดที่ชื่อเมนูเพื่อเปิดเมนูย่อย</p>
+
+  <h2>🔄 เปลี่ยนสินค้าทดแทน</h2>
+  <p>ใช้เมื่อส่ง SKU อื่นแทนของที่สั่ง</p>
+  <ol class="steps">
+    <li>ใส่ <b>Tracking No.</b></li>
+    <li>แต่ละแถว เลือก <b>SKU เดิม</b> (จากสินค้าในออเดอร์นั้น) ใส่ <b>จำนวน</b> แล้วเลือก/พิมพ์ <b>SKU ใหม่</b> กด <b>➕ เพิ่มรายการ</b> เพื่อเพิ่มแถว</li>
+    <li>กด <b>💾 บันทึกสินค้าทดแทน</b></li>
+  </ol>
+  <div class="note"><b>กฎที่ระบบบังคับ:</b> เลือก SKU เดิมซ้ำกันไม่ได้ · จำนวนที่ทดแทนมากกว่าจำนวนในออเดอร์ไม่ได้ · เพิ่มแถวได้ไม่เกินจำนวนรายการ SKU ที่มีในออเดอร์นั้น (เช่น ออเดอร์มี 3 SKU เพิ่มได้ 3 แถว)</div>
+
+  <h2>🗑️ ตัดสินค้าออกจากออเดอร์</h2>
+  <p>ใช้เมื่อสินค้าบางรายการไม่ได้ส่ง (ของหมด/ยกเลิก) ให้ QC ไม่ต้องยิงรายการนั้น</p>
+  <ol class="steps">
+    <li>ใส่ <b>Tracking No.</b> เลือก SKU ที่ต้องการตัดออกและจำนวน (เพิ่มได้หลายแถวด้วย ➕ เพิ่มรายการ)</li>
+    <li>กด <b>🗑️ บันทึกตัดออก</b> แล้วยืนยัน</li>
+  </ol>
+  <p>ทั้งสองหน้ามีตารางประวัติด้านล่าง ค้นหาด้วย Tracking หรือ SKU ได้ และมีปุ่ม <b>🗑️ ลบ</b> เพื่อยกเลิกรายการที่บันทึกผิด (ถามยืนยันก่อน)</p>
+  <div class="tip"><b>เคล็ดลับ:</b> ถ้ายิงสินค้าตอน QC แล้วขึ้น "ไม่อยู่ในออเดอร์นี้" ทั้งที่หยิบถูก ให้ตรวจว่าควรบันทึกสินค้าทดแทนไว้ก่อนหรือไม่</div>
+</section>
+
+<!-- ============ 7 Scan log ============ -->
+<section class="chapter">
+  <h1>7 · ประวัติการยิงสแกนเนอร์ และ RRQC Scanner</h1>
+  <p>บันทึกการยิงทุกครั้ง เพื่อตรวจย้อนหลังว่าใครยิงอะไร เมื่อไร จากเครื่องไหน เก็บเฉพาะรหัสที่ขึ้นต้นด้วย <code>TH</code> หรือ <code>SPX</code> (ไม่สนตัวพิมพ์เล็ก/ใหญ่)</p>
+
+  <h2>หน้า "ประวัติการยิงเครื่องสแกนเนอร์"</h2>
+  <ul>
+    <li>เลือก <b>วันที่</b> (ค่าเริ่มต้นคือวันนี้) · ค้นหารหัส · กรอง <b>🖥️ เครื่อง</b> (ทุกเครื่อง / ชื่อเครื่อง / 🌐 เว็บเบราว์เซอร์) · ปุ่ม 🔄 รีเฟรช</li>
+    <li>แถบสรุปด้านบน: ทั้งหมด · Tracking · สินค้า · ไม่พบในระบบ</li>
+    <li>ตาราง: เวลา · รหัสที่ยิง · ประเภท · เครื่อง · ยิงที่หน้า/โปรแกรม (ถ้ายิงตอนอยู่โปรแกรมอื่น จะบอกชื่อโปรแกรม เช่น "โปรแกรมอื่น (chrome)")</li>
+    <li>ข้อมูลเก่ากว่า 1 เดือนถูกลบอัตโนมัติทุกวันเวลา 03:00 น.</li>
+  </ul>
+
+  <h2>โปรแกรม RRQC Scanner (บันทึกการยิงในทุกโปรแกรม)</h2>
+  <p>หน้าเว็บจับการยิงได้เฉพาะตอนเปิดเว็บอยู่ ถ้าต้องการบันทึกการยิงแม้กำลังใช้โปรแกรมอื่น ให้ติดตั้ง <b>RRQC Scanner</b> บนคอมที่ต่อเครื่องสแกน</p>
+  <ol class="steps">
+    <li>คัดลอกไฟล์ <code>RRQCScanner.exe</code> ไปไว้ที่ถาวร เช่น <code>C:\RRQC\</code> (ถ้ายังไม่มีไฟล์ ดับเบิลคลิก <code>tools/scanner-logger/build.bat</code> เพื่อสร้าง)</li>
+    <li>ดับเบิลคลิกเปิด ถ้า Windows ขึ้น "Windows protected your PC" กด <b>More info → Run anyway</b></li>
+    <li>ติ๊ก <b>เปิดโปรแกรมอัตโนมัติพร้อมวินโดวส์</b></li>
+    <li>ตั้ง <b>ชื่อเครื่องนี้</b> เช่น "โต๊ะแพ็ค 1" (ค่าเริ่มต้นคือชื่อคอม) แล้วกด <b>บันทึก</b> ชื่อนี้จะแสดงในหน้าประวัติของเว็บ</li>
+    <li>ลองยิงรหัส TH… สักครั้ง ในหน้าต่างโปรแกรมต้องมีแถวใหม่สถานะ "ส่งแล้ว ✓"</li>
+  </ol>
+  <table>
+    <tr><th style="width:30%">ส่วนของโปรแกรม</th><th>ทำอะไร</th></tr>
+    <tr><td>ป้ายสถานะ</td><td><span class="pill p-green">กำลังทำงาน</span> · <span class="pill p-orange">หยุดชั่วคราว</span> · <span class="pill p-red">ส่งไม่ได้ (ออฟไลน์)</span> ถ้าไม่มีเน็ตจะเก็บคิวไว้ในเครื่องแล้วส่งให้เองเมื่อเน็ตกลับมา</td></tr>
+    <tr><td>ตัวเลข</td><td>ยิงวันนี้ · ส่งขึ้นระบบแล้ว · รอส่ง</td></tr>
+    <tr><td>คำขึ้นต้นที่บันทึก</td><td>ค่าเริ่มต้น <code>TH, SPX</code> แก้ได้ (คั่นด้วยจุลภาค)</td></tr>
+    <tr><td>หยุดชั่วคราว</td><td>ปุ่มหยุดเมื่อไม่ต้องการให้จดชั่วคราว</td></tr>
+    <tr><td>ปิดหน้าต่าง</td><td>ไม่ได้ปิดโปรแกรม แค่ซ่อนไปที่ไอคอนถาดระบบ ออกจริงให้คลิกขวาที่ไอคอน → ออกจากโปรแกรม</td></tr>
+  </table>
+  <div class="note"><b>ติดตั้งหลายเครื่อง:</b> ใช้ไฟล์ <code>.exe</code> เดียวกัน ทุกเครื่องส่งเข้าฐานข้อมูลเดียวกัน แยกกันด้วย "ชื่อเครื่อง" ในหน้าประวัติ อย่าเปิดซ้ำในเครื่องเดียวกัน (โปรแกรมจะเตือน) · โปรแกรมอ่านรหัสได้แม้แป้นพิมพ์เป็นภาษาไทย แต่ช่องกรอกในเว็บยังควรใช้แป้น EN</div>
+  <p class="small">ข้อมูลของโปรแกรมเก็บที่ <code>%APPDATA%\RRQC-Scanner\</code> (ตั้งค่า + สำเนาสำรองการยิง)</p>
+</section>
+
+<!-- ============ 8 Camera ============ -->
+<section class="chapter compact">
+  <h1>8 · กล้อง CCTV และโปรแกรม RRQC Camera</h1>
+  <p>มี <b>คอมเครื่องหลัก 1 เครื่อง</b> ที่เสียบกล้อง EMEET ทำหน้าที่เปิดกล้อง จับความเคลื่อนไหว และเก็บคลิป เครื่องอื่น (คอม/มือถือ) ใช้หน้าเว็บ "กล้อง CCTV" เพื่อดูเท่านั้น</p>
+
+  <h2>A · ติดตั้งบนคอมเครื่องหลัก (ทำครั้งเดียว)</h2>
+  <ol class="steps">
+    <li>ดาวน์โหลด <b>ffmpeg</b> (build "essentials" จาก <code>gyan.dev/ffmpeg/builds</code>) แตกไฟล์ แล้วเอา <code>ffmpeg.exe</code> (อยู่ในโฟลเดอร์ <code>bin</code>) ไปวางในโฟลเดอร์เดียวกับ <code>RRQCCamera.exe</code></li>
+    <li>ถ้ายังไม่มี <code>RRQCCamera.exe</code> ให้ดับเบิลคลิก <code>tools/camera/build.bat</code> เพื่อสร้าง</li>
+    <li>เปิด <code>RRQCCamera.exe</code> ถ้า Windows Firewall ถาม ให้กด <b>อนุญาต (เครือข่ายส่วนตัว)</b></li>
+    <li>โปรแกรมเลือกกล้องตัวแรกให้เอง เลือกความละเอียด/ความไว/โฟลเดอร์เก็บคลิป แล้วกด <b>บันทึกและใช้ค่านี้</b> ติ๊ก <b>เปิดพร้อมวินโดวส์</b> ถ้าต้องการ</li>
+  </ol>
+
+  <h2>B · หน้าต่างโปรแกรม RRQC Camera</h2>
+  <table>
+    <tr><th style="width:30%">รายการ</th><th>คำอธิบาย</th></tr>
+    <tr><td>พรีวิว + ป้ายสถานะ</td><td><span class="pill p-green">เฝ้าระวัง</span> · <span class="pill p-red">กำลังบันทึก</span> · <span class="pill p-orange">กล้องค้าง กำลังกู้คืน</span> (เปิดกล้องใหม่เองเมื่อภาพค้าง)</td></tr>
+    <tr><td>กล้อง / ความละเอียด / fps</td><td>แนะนำ 1280x720 หรือ 1920x1080 ที่ 15 fps ถ้าภาพขาดให้ลดความละเอียด</td></tr>
+    <tr><td>ความไว</td><td>1–10 ยิ่งมากยิ่งไว (ขยับน้อยก็บันทึก)</td></tr>
+    <tr><td>หยุดอัดหลังไม่มีเคลื่อนไหว</td><td>3 / 5 / 10 วินาที โปรแกรมเก็บภาพก่อนเริ่มเคลื่อนไหวประมาณ 10 วินาทีให้ด้วย</td></tr>
+    <tr><td>การหมุนภาพ</td><td>ถ้ากล้องติดตั้งตะแคง/กลับหัว คลิปที่บันทึกจะตั้งตรงด้วย</td></tr>
+    <tr><td>โฟลเดอร์เก็บคลิป · เก็บคลิป (วัน)</td><td>ค่าเริ่มต้นเก็บ 30 วัน แล้วลบเอง (ใส่ 0 = ไม่ลบ) ลบเฉพาะไฟล์ <code>motion_…</code></td></tr>
+    <tr><td>ที่อยู่ + รหัสดูกล้อง</td><td>เช่น <code>http://192.168.1.68:8787</code> และรหัส 8 ตัว ใช้ใส่ในหน้าเว็บ มีปุ่มคัดลอกและ "สร้างรหัสใหม่"</td></tr>
+  </table>
+
+  <h2>C · ดูกล้องจากหน้าเว็บ (คอมหรือมือถือ ต้องอยู่ Wi-Fi เดียวกับเครื่องหลัก)</h2>
+  <ol class="steps">
+    <li>เปิดหน้าเว็บ RRQC ด้วยที่อยู่ <code>http://…</code> (บนมือถือใช้ที่อยู่ของคอมเครื่องที่รัน <code>start-cctv.bat</code> เช่น <code>http://192.168.1.68:5510</code>)</li>
+    <li>เมนู <span class="menu">📹 กล้อง CCTV</span> ใส่ <b>ที่อยู่เครื่องหลัก</b> (เช่น <code>192.168.1.68:8787</code>) และ <b>รหัสดูกล้อง</b> แล้วกด <b>เชื่อมต่อ</b> ครั้งต่อไปเว็บจำค่าไว้และต่อเอง</li>
+    <li>แท็บ <b>🔴 กล้องสด</b>: ดูภาพสด ปุ่มเต็มจอ และเลือก <b>การหมุนภาพ</b> (สั่งไปที่เครื่องหลัก ภาพจะสะดุดสักครู่ขณะโปรแกรมเริ่มกล้องใหม่)</li>
+    <li>แท็บ <b>⏪ ดูย้อนหลัง</b>: เลือกวัน/เวลา หรือกดปุ่มลัด <b>1 ชม.ล่าสุด · วันนี้ · เมื่อวาน</b> แล้วดูคลิป คลิกที่ไทม์ไลน์เพื่อข้ามไปช่วงเวลานั้น มีปุ่มก่อนหน้า/ถัดไป และ <b>⬇ ดาวน์โหลด</b> (ทีละคลิปหรือทั้งช่วง)</li>
+  </ol>
+  <div class="warn"><b>ข้อจำกัด:</b> ใช้ได้เฉพาะในเครือข่ายเดียวกัน (ยังดูจากนอกบ้านไม่ได้) · ข้อมูลวิ่งแบบไม่เข้ารหัสใน Wi-Fi บ้าน อย่าบอกรหัสกับคนที่ไม่ไว้ใจ (สร้างรหัสใหม่ได้ทุกเมื่อ) · ต้องเปิดเว็บแบบ <code>http://</code> ไม่ใช่ <code>https://</code> · คอมเครื่องหลักต้องเปิดโปรแกรมและเปิดเครื่องไว้ ถ้าปิดจะไม่บันทึกและดูไม่ได้</div>
+  <div class="tip"><b>ให้คอมเครื่องหลักไม่หลับ:</b> ดับเบิลคลิก <code>tools/cctv/setup-always-on.bat</code> หนึ่งครั้งบนเครื่องนั้น จะตั้งไม่ให้เครื่อง/จอหลับตอนเสียบไฟ และตั้งให้เปิดหน้าเว็บ CCTV อัตโนมัติตอนเปิดเครื่อง ส่วนโปรแกรม RRQC Camera ให้ติ๊ก "เปิดโปรแกรมอัตโนมัติพร้อมวินโดวส์" ในหน้าต่างของมันเอง (สองอย่างแยกกัน) ถ้าคอมหลับ กล้องจะไม่บันทึก</div>
+</section>
+
+<!-- ============ 9 Troubleshooting ============ -->
+<section class="chapter">
+  <h1>9 · แก้ปัญหาที่พบบ่อย</h1>
+
+  <h2>หน้าเว็บ</h2>
+  <table>
+    <tr><th style="width:36%">อาการ</th><th>วิธีแก้</th></tr>
+    <tr><td>หน้าเว็บไม่มีสไตล์ / ปุ่มเรียงกันยาว</td><td>ไฟล์ <code>css/</code> หรือ <code>js/</code> ไม่ได้อยู่ในโฟลเดอร์ที่ถูกต้อง (มักเกิดจากอัปโหลดไป GitHub แล้วไฟล์ถูกแบน) ให้ลากทั้งโฟลเดอร์ <code>css</code> <code>js</code> <code>tools</code> ไปวาง ไม่ใช่ลากไฟล์ข้างใน</td></tr>
+    <tr><td>วงกลมหมุน "กำลังโหลดข้อมูล" ไม่จบ / ป้ายแดง</td><td>ตรวจอินเทอร์เน็ต แล้วกด <span class="kbd">Ctrl</span>+<span class="kbd">F5</span> ถ้ายังไม่หาย แจ้งผู้ดูแลตรวจ Supabase</td></tr>
+    <tr><td>แก้โค้ด/อัปเดตแล้วหน้ายังเป็นของเก่า</td><td>กด <span class="kbd">Ctrl</span>+<span class="kbd">F5</span> หนึ่งครั้งเพื่อล้างแคช</td></tr>
+    <tr><td>ยิงสแกนแล้วตัวอักษรเพี้ยนเป็นภาษาไทย</td><td>สลับแป้นพิมพ์เป็น EN (<span class="kbd">Alt</span>+<span class="kbd">Shift</span> หรือ <span class="kbd">Win</span>+<span class="kbd">Space</span>)</td></tr>
+    <tr><td>กดยิงแล้วไม่มีอะไรเกิดขึ้น</td><td>เคอร์เซอร์ต้องอยู่ในช่องสแกน คลิกที่ช่องก่อน ตรวจว่าสายเครื่องสแกนเสียบแน่น</td></tr>
+  </table>
+
+  <h2>RRQC Scanner</h2>
+  <table>
+    <tr><th style="width:36%">อาการ</th><th>วิธีแก้</th></tr>
+    <tr><td>ยิงตอนอยู่โปรแกรมอื่นแล้วไม่ขึ้นในหน้าประวัติ</td><td>ตรวจว่าโปรแกรม RRQC Scanner เปิดอยู่ (ไอคอนในถาดระบบ) ป้ายเป็น "กำลังทำงาน" และรหัสที่ยิงขึ้นต้นด้วย TH/SPX</td></tr>
+    <tr><td>ป้ายแดง "ส่งไม่ได้ (ออฟไลน์)"</td><td>ตรวจอินเทอร์เน็ต รายการที่ค้างจะส่งให้เองเมื่อเน็ตกลับมา</td></tr>
+    <tr><td>Windows บล็อกไฟล์ / ขึ้น SmartScreen</td><td>กด More info → Run anyway หรือคลิกขวาไฟล์ → Properties → ติ๊ก Unblock โปรแกรมป้องกันไวรัสบางตัวอาจบล็อกเพราะดักการกดแป้น ให้เพิ่มเป็นข้อยกเว้น</td></tr>
+  </table>
+
+  <h2>กล้อง</h2>
+  <table>
+    <tr><th style="width:36%">อาการ</th><th>วิธีแก้</th></tr>
+    <tr><td>เว็บขึ้น "ติดต่อโปรแกรมกล้องไม่ได้"</td><td>ตรวจ 1) โปรแกรม RRQC Camera เปิดอยู่ที่เครื่องหลัก 2) อุปกรณ์อยู่ Wi-Fi เดียวกัน 3) ที่อยู่/พอร์ตถูกต้อง 4) Firewall อนุญาต (เครือข่ายส่วนตัว)</td></tr>
+    <tr><td>"รหัสไม่ถูกต้อง"</td><td>ดูรหัสล่าสุดในหน้าต่างโปรแกรม (ถ้าเคยกด "สร้างรหัสใหม่" รหัสเดิมใช้ไม่ได้) ใส่ผิดบ่อยเกินไปจะถูกพักการใช้ชั่วคราว รอสักครู่</td></tr>
+    <tr><td>ภาพขาดเป็นแถบ / สีเพี้ยน (ดูใน Windows Settings ก็เป็น)</td><td>ปัญหาที่ตัวกล้อง สาย หรือพอร์ต USB: เสียบกล้องพอร์ต USB 3.0 (สีฟ้า) ที่ตัวเครื่องตรงๆ ไม่ผ่าน hub ลองสายสั้น/สายอื่น ถอดอุปกรณ์ USB อื่นออกชั่วคราว ลดความละเอียดเป็น 720p</td></tr>
+    <tr><td>สถานะ "กล้องค้าง กำลังกู้คืน" ซ้ำๆ จอดำ ข้อความแดงใต้พรีวิวว่า "กล้องถูกโปรแกรมอื่นใช้อยู่"</td><td>กล้อง USB เปิดได้ทีละโปรแกรมเดียว <b>ปิดหน้า Settings → Cameras ของ Windows (พรีวิวกล้อง)</b>, แอป Camera, EMEET Studio, Zoom/Teams และแท็บเบราว์เซอร์ที่เปิดกล้อง แล้วรอสักครู่ โปรแกรมลองใหม่เอง</td></tr>
+    <tr><td>ข้อความแดง "กล้องไม่รับความละเอียด/fps ที่ตั้งไว้"</td><td>กล้องบางรุ่นรับ fps เฉพาะช่วง (เช่น EMEET C60E ต่ำสุด 30 fps) โปรแกรมปรับให้ตรงเองอัตโนมัติ ถ้ายังขึ้น ให้เลือกความละเอียดอื่นในรายการ</td></tr>
+    <tr><td>ยังกู้คืนซ้ำๆ แม้ปิดโปรแกรมอื่นแล้ว</td><td>ดูไฟล์ <code>%APPDATA%\RRQC-Camera\camera.log</code> ถอดแล้วเสียบสาย USB ใหม่ ลดความละเอียด/fps</td></tr>
+    <tr><td>เปิดโปรแกรมแล้วแจ้ง "ไม่พบ ffmpeg.exe"</td><td>วาง <code>ffmpeg.exe</code> ไว้ข้าง <code>RRQCCamera.exe</code> (บทที่ 8-A)</td></tr>
+    <tr><td>แจ้ง "เปิดเซิร์ฟเวอร์พอร์ต … ไม่ได้"</td><td>มีโปรแกรมอื่นใช้พอร์ตนั้นอยู่ เปลี่ยนพอร์ตในหน้าต่างโปรแกรม แล้วกด "บันทึกและใช้ค่านี้" (อย่าลืมแก้ที่อยู่ในหน้าเว็บให้ตรง)</td></tr>
+    <tr><td>ไม่มีคลิปในช่วงที่เลือก</td><td>คลิปจะถูกบันทึกเฉพาะตอนมีความเคลื่อนไหว ลองเพิ่ม "ความไว" และตรวจโฟลเดอร์เก็บคลิป คลิปเก่าเกินจำนวนวันที่ตั้งไว้ถูกลบแล้ว</td></tr>
+  </table>
+</section>
+
+<!-- ============ 10 Admin ============ -->
+<section class="chapter compact">
+  <h1>10 · สำหรับผู้ดูแลระบบ</h1>
+
+  <h2>ข้อมูลอยู่ที่ไหน</h2>
+  <table>
+    <tr><th style="width:30%">ตาราง Supabase</th><th>เก็บอะไร</th></tr>
+    <tr><td><code>products</code></td><td>สินค้าหลัก (แบรนด์ · SKU · GTIN)</td></tr>
+    <tr><td><code>order_items</code></td><td>รายการสินค้าในออเดอร์ (ถูกแทนที่ทุกครั้งที่อัปโหลดไฟล์ ทำ ฟวย)</td></tr>
+    <tr><td><code>qc_log</code></td><td>ผล QC ของแต่ละออเดอร์ (ตรวจแล้ว/ไม่ได้ตรวจ เวลา)</td></tr>
+    <tr><td><code>substitutes</code> · <code>cuts</code></td><td>สินค้าทดแทน · รายการที่ตัดออก</td></tr>
+    <tr><td><code>fuay_upload</code> · <code>checked_trackings</code></td><td>ข้อมูลไฟล์ ฟวย · รายการที่เช็คแล้ว</td></tr>
+    <tr><td><code>scan_log</code></td><td>ประวัติการยิงสแกนเนอร์ (ลบอัตโนมัติเมื่อเก่ากว่า 1 เดือน)</td></tr>
+  </table>
+  <p>ไฟล์คลิปกล้องไม่อยู่ใน Supabase เก็บอยู่ในโฟลเดอร์บนคอมเครื่องหลักเท่านั้น (สำรองเองถ้าต้องการ)</p>
+
+  <h2>โครงสร้างไฟล์โปรเจกต์</h2>
+  <table>
+    <tr><th style="width:36%">ไฟล์/โฟลเดอร์</th><th>หน้าที่</th></tr>
+    <tr><td><code>index.html</code>, <code>css/style.css</code></td><td>หน้าเว็บและสไตล์</td></tr>
+    <tr><td><code>js/script.js</code></td><td>ตรรกะหลัก (QC, Orders, ฟวย, สินค้า, ทดแทน)</td></tr>
+    <tr><td><code>js/supabase-api.js</code></td><td>ติดต่อฐานข้อมูล</td></tr>
+    <tr><td><code>js/scanlog.js</code> · <code>js/cctv.js</code></td><td>บันทึกการยิงในเว็บ · หน้าดูกล้อง</td></tr>
+    <tr><td><code>tools/scanner-logger/</code></td><td>ซอร์สโปรแกรม RRQC Scanner</td></tr>
+    <tr><td><code>tools/camera/</code></td><td>ซอร์สโปรแกรม RRQC Camera + ตัวทดสอบ (<code>run-selftest.ps1</code> ทดสอบหน่วย · <code>tests/integration.ps1</code> ทดสอบเต็มระบบด้วยภาพจำลอง ราว 2 นาที) บันทึกการทำงานอยู่ที่ <code>%APPDATA%\RRQC-Camera\camera.log</code></td></tr>
+    <tr><td><code>tools/cctv/</code></td><td><code>start-cctv.bat</code> เปิดเว็บ · <code>setup-always-on.bat</code> ไม่ให้เครื่องหลับ + เปิดเว็บตอนเปิดเครื่อง</td></tr>
+    <tr><td><code>docs/</code></td><td>คู่มือฉบับนี้ (PDF) และต้นฉบับ HTML</td></tr>
+  </table>
+
+  <h2>ความปลอดภัย (สำคัญ)</h2>
+  <div class="warn"><b>1) repo GitHub ต้องเป็น Private</b> ในโค้ดมีคีย์สาธารณะของ Supabase ฝังอยู่ และฐานข้อมูลตั้งให้ใครก็อ่าน/เขียนได้ ถ้า repo เป็น Public คนอื่นเห็นคีย์แล้วแก้/ลบข้อมูลออเดอร์ สินค้า และประวัติได้ ตั้งค่าที่ Settings → Danger Zone → Change visibility → Make private<br><b>2)</b> อย่าเอารหัสดูกล้องหรือที่อยู่ภายในไปโพสต์ที่สาธารณะ<br><b>3)</b> อย่าใส่ข้อมูลลูกค้าจริงหรือภาพหน้าจอที่มีข้อมูลจริงลงใน repo</div>
+
+  <h2>อัปโหลดขึ้น GitHub</h2>
+  <ul>
+    <li>ใช้ GitHub Desktop (Sign in แล้วกด Push origin) หรือ <code>git push origin main</code></li>
+    <li>อัปโหลดผ่านหน้าเว็บ GitHub ต้อง <b>ลากทั้งโฟลเดอร์</b> (<code>css</code>, <code>js</code>, <code>tools</code>, <code>docs</code>) ปุ่ม "choose your files" เลือกโฟลเดอร์ไม่ได้ ไฟล์จะหลุดมาอยู่ระดับบนสุด · <code>ffmpeg.exe</code> และ <code>.exe</code> ที่คอมไพล์เองไม่ถูกเก็บใน git (สร้างใหม่ด้วย <code>build.bat</code>)</li>
+  </ul>
+
+  <p class="small">แก้คู่มือ: แก้ <code>docs/manual/manual.html</code> แล้วพิมพ์เป็น PDF ใหม่ (Chrome → Print → Save as PDF, A4, เปิด Background graphics) บันทึกทับ <code>docs/RRQC-manual.pdf</code></p>
+</section>
+
+</body>
+</html>

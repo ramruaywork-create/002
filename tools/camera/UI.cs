@@ -225,6 +225,9 @@ class MainForm : Form
         portBox = new NumericUpDown(); portBox.SetBounds(x, 408, 100, 28); portBox.Minimum = 1024; portBox.Maximum = 65535; Controls.Add(portBox);
         Controls.Add(Lbl("เก็บคลิป (วัน, 0 = ไม่ลบ)", x + 120, 388, 9f, FontStyle.Regular, Muted));
         retentionBox = new NumericUpDown(); retentionBox.SetBounds(x + 120, 408, 100, 28); retentionBox.Minimum = 0; retentionBox.Maximum = 3650; Controls.Add(retentionBox);
+        // เมาส์เลื่อนล้อผ่านช่องตัวเลขแล้วค่าเปลี่ยนเอง (ทำให้พอร์ตตกไปที่ 1024 ได้โดยไม่รู้ตัว) จึงปิดการเปลี่ยนค่าด้วยล้อเมาส์
+        portBox.MouseWheel += delegate(object o, MouseEventArgs e) { ((HandledMouseEventArgs)e).Handled = true; };
+        retentionBox.MouseWheel += delegate(object o, MouseEventArgs e) { ((HandledMouseEventArgs)e).Handled = true; };
 
         localOnlyBox = new CheckBox(); localOnlyBox.Text = "ให้เข้าได้เฉพาะเครื่องนี้ (ปิดการดูจากมือถือ)"; localOnlyBox.AutoSize = true; localOnlyBox.Location = new Point(x, 448); Controls.Add(localOnlyBox);
         startupBox = new CheckBox(); startupBox.Text = "เปิดโปรแกรมอัตโนมัติพร้อมวินโดวส์"; startupBox.AutoSize = true; startupBox.Location = new Point(x, 474);
@@ -392,6 +395,19 @@ class MainForm : Form
         catch (Exception ex) { MessageBox.Show("ตั้งค่าเปิดอัตโนมัติไม่สำเร็จ: " + ex.Message); }
     }
 
+    // แปลข้อความ error ของ ffmpeg/DirectShow เป็นคำอธิบายภาษาไทยที่บอกว่าต้องทำอะไร
+    static string ExplainError(string e)
+    {
+        if (string.IsNullOrEmpty(e)) return "";
+        if (e.IndexOf("already in use", StringComparison.OrdinalIgnoreCase) >= 0 || e.IndexOf("Could not run graph", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "กล้องถูกโปรแกรมอื่นใช้อยู่ — ปิดหน้า Settings > Cameras ของ Windows, แอป Camera, Zoom/Teams/EMEET Studio และแท็บเบราว์เซอร์ที่เปิดกล้อง แล้วรอสักครู่";
+        if (e.IndexOf("Could not set video options", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "กล้องไม่รับความละเอียด/fps ที่ตั้งไว้ — ลองเลือกความละเอียดอื่นในรายการ";
+        if (e.IndexOf("Error opening input", StringComparison.OrdinalIgnoreCase) >= 0 || e.IndexOf("I/O error", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "เปิดกล้องไม่ได้ — ตรวจสาย USB และว่าเลือกกล้องถูกตัว";
+        return "ปัญหาล่าสุด: " + (e.Length > 120 ? e.Substring(0, 120) + "…" : e);
+    }
+
     // ---------- รีเฟรชหน้าจอทุก 200 ms ----------
     void RefreshUi()
     {
@@ -414,7 +430,10 @@ class MainForm : Form
             default: text = "● หยุดอยู่"; bg = Color.FromArgb(235, 238, 245); fg = Muted; break;
         }
         pill.Text = text; pill.BackColor = bg; pill.ForeColor = fg;
-        info.Text = eng.ActualWidth > 0 ? "กล้องส่งภาพจริง " + eng.ActualWidth + "x" + eng.ActualHeight + " @ " + eng.ActualFps.ToString("0.0") + " fps" : (st == "stopped" ? "กล้องหยุดอยู่" : "รอภาพจากกล้อง...");
+        string problem = (st == "starting" || st == "recovering") ? ExplainError(eng.LastError) : "";
+        info.Text = problem != "" ? problem
+            : (eng.ActualWidth > 0 ? "กล้องส่งภาพจริง " + eng.ActualWidth + "x" + eng.ActualHeight + " @ " + eng.ActualFps.ToString("0.0") + " fps" : (st == "stopped" ? "กล้องหยุดอยู่" : "รอภาพจากกล้อง..."));
+        info.ForeColor = problem != "" ? Red : Muted;
         string toggle = eng.State == "stopped" ? "▶ เริ่มกล้อง" : "■ หยุดกล้อง";
         startStopBtn.Text = toggle; trayToggle.Text = eng.State == "stopped" ? "เริ่มกล้อง" : "หยุดกล้อง";
         tray.Text = "RRQC Camera - " + text.Replace("● ", "");
