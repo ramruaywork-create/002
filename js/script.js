@@ -563,14 +563,21 @@ function setupNewSkuDatalist() {
         opt.label = p.brand ? `${p.skuMerchant} (${p.brand})` : p.skuMerchant;
         listEl.appendChild(opt);
 
-        // เพิ่ม GTIN เป็นตัวเลือกแยกด้วย เพื่อให้พิมพ์/สแกนบาร์โค้ดแล้วขึ้นแนะนำอัตโนมัติได้
-        if (p.gtin && String(p.gtin).trim() !== '') {
+        // เพิ่ม GTIN (ทั้ง 3 ช่อง) เป็นตัวเลือกแยกด้วย เพื่อให้พิมพ์/สแกนบาร์โค้ดแล้วขึ้นแนะนำอัตโนมัติได้
+        productGtins(p).forEach(g => {
             const gtinOpt = document.createElement('option');
-            gtinOpt.value = String(p.gtin).trim();
-            gtinOpt.label = `${p.gtin} → ${p.skuMerchant}${p.brand ? ' (' + p.brand + ')' : ''}`;
+            gtinOpt.value = g;
+            gtinOpt.label = `${g} → ${p.skuMerchant}${p.brand ? ' (' + p.brand + ')' : ''}`;
             listEl.appendChild(gtinOpt);
-        }
+        });
     });
+}
+
+// GTIN ทั้งหมดของสินค้า (สูงสุด 3 ค่า ตัดช่องว่างแล้ว)
+function productGtins(p) {
+    return [p && p.gtin, p && p.gtin2, p && p.gtin3]
+        .map(g => String(g || '').trim())
+        .filter(g => g !== '');
 }
 
 function findProductBySkuOrGtin(code) {
@@ -578,7 +585,7 @@ function findProductBySkuOrGtin(code) {
     const val = String(code).trim().toLowerCase();
     return (db.products || []).find(p =>
         (p.skuMerchant && String(p.skuMerchant).trim().toLowerCase() === val) ||
-        (p.gtin && String(p.gtin).trim().toLowerCase() === val)
+        productGtins(p).some(g => g.toLowerCase() === val)
     ) || null;
 }
 
@@ -740,7 +747,7 @@ function renderProducts() {
     const filtered = list.filter(p =>
         (p.brand && p.brand.toLowerCase().includes(f)) ||
         (p.skuMerchant && p.skuMerchant.toLowerCase().includes(f)) ||
-        (p.gtin && p.gtin.toLowerCase().includes(f))
+        productGtins(p).some(g => g.toLowerCase().includes(f))
     );
 
     const paginated = paginateList(filtered, currentPage.products, rowsPerPage.products);
@@ -757,7 +764,7 @@ function renderProducts() {
         <tr>
             <td><b>${p.brand || '-'}</b></td>
             <td><span class="sku-code">${p.skuMerchant}</span></td>
-            <td>${p.gtin || '-'}</td>
+            <td>${productGtins(p).join('<br>') || '-'}</td>
             <td class="text-center">
                 <button class="btn-edit-row" onclick='editProductRow(${JSON.stringify(p)})'>✏️ แก้ไข</button>
                 <button class="btn-revert" onclick="deleteProductRow('${p.rowIndex}')">🗑️ ลบ</button>
@@ -1252,7 +1259,9 @@ async function saveProduct(e) {
     const data = {
         brand: document.getElementById('prodBrand') ? document.getElementById('prodBrand').value.trim() : '',
         skuMerchant: document.getElementById('prodSkuMerchant') ? document.getElementById('prodSkuMerchant').value.trim() : '',
-        gtin: document.getElementById('prodGtin') ? document.getElementById('prodGtin').value.trim() : ''
+        gtin: document.getElementById('prodGtin') ? document.getElementById('prodGtin').value.trim() : '',
+        gtin2: document.getElementById('prodGtin2') ? document.getElementById('prodGtin2').value.trim() : '',
+        gtin3: document.getElementById('prodGtin3') ? document.getElementById('prodGtin3').value.trim() : ''
     };
 
     if (!data.skuMerchant) { showAppAlert('กรุณากรอก SKU สินค้า'); return; }
@@ -1278,6 +1287,8 @@ function editProductRow(product) {
     document.getElementById('prodBrand').value = product.brand || '';
     document.getElementById('prodSkuMerchant').value = product.skuMerchant || '';
     document.getElementById('prodGtin').value = product.gtin || '';
+    document.getElementById('prodGtin2').value = product.gtin2 || '';
+    document.getElementById('prodGtin3').value = product.gtin3 || '';
 
     const btn = document.getElementById('btnSaveProduct');
     if (btn) btn.textContent = '💾 บันทึกการแก้ไข';
@@ -1587,6 +1598,11 @@ function guessProductColumnMapping(headers, rows) {
 
     const gtinIdx = guessProductColumnIndex(headers, usedIdx, PRODUCT_FIELD_KEYWORDS.gtin);
     if (gtinIdx !== -1) usedIdx.add(gtinIdx);
+    // ไฟล์ที่มีหลายคอลัมน์บาร์โค้ด: เดาคอลัมน์ที่ 2 และ 3 ต่อจากคอลัมน์แรก
+    const gtin2Idx = guessProductColumnIndex(headers, usedIdx, PRODUCT_FIELD_KEYWORDS.gtin);
+    if (gtin2Idx !== -1) usedIdx.add(gtin2Idx);
+    const gtin3Idx = guessProductColumnIndex(headers, usedIdx, PRODUCT_FIELD_KEYWORDS.gtin);
+    if (gtin3Idx !== -1) usedIdx.add(gtin3Idx);
 
     const skuIdx = guessProductColumnIndex(headers, usedIdx, PRODUCT_FIELD_KEYWORDS.sku);
     if (skuIdx !== -1) usedIdx.add(skuIdx);
@@ -1607,7 +1623,7 @@ function guessProductColumnMapping(headers, rows) {
         if (altIdx !== -1 && emptyRatio(altIdx) < emptyRatio(brandIdx)) brandIdx = altIdx;
     }
 
-    return { skuIdx, brandIdx, gtinIdx };
+    return { skuIdx, brandIdx, gtinIdx, gtin2Idx, gtin3Idx };
 }
 
 function readWorkbookRowsFromFile(file) {
@@ -1701,6 +1717,8 @@ function renderProductMappingSelects(headers, guess) {
     document.getElementById('mapProdSku').innerHTML = buildOptions(guess.skuIdx, false);
     document.getElementById('mapProdBrand').innerHTML = buildOptions(guess.brandIdx, true);
     document.getElementById('mapProdGtin').innerHTML = buildOptions(guess.gtinIdx, true);
+    document.getElementById('mapProdGtin2').innerHTML = buildOptions(guess.gtin2Idx, true);
+    document.getElementById('mapProdGtin3').innerHTML = buildOptions(guess.gtin3Idx, true);
 }
 
 function buildMappedProductRows() {
@@ -1709,6 +1727,8 @@ function buildMappedProductRows() {
     const skuIdx = Number(document.getElementById('mapProdSku').value);
     const brandIdx = Number(document.getElementById('mapProdBrand').value);
     const gtinIdx = Number(document.getElementById('mapProdGtin').value);
+    const gtin2Idx = Number(document.getElementById('mapProdGtin2').value);
+    const gtin3Idx = Number(document.getElementById('mapProdGtin3').value);
 
     const seenInFile = new Set();
     const mapped = [];
@@ -1717,6 +1737,8 @@ function buildMappedProductRows() {
         const skuMerchant = skuIdx > -1 ? String(r[skuIdx] || '').trim() : '';
         const brand = brandIdx > -1 ? String(r[brandIdx] || '').trim() : '';
         const gtin = gtinIdx > -1 ? String(r[gtinIdx] || '').trim() : '';
+        const gtin2 = gtin2Idx > -1 ? String(r[gtin2Idx] || '').trim() : '';
+        const gtin3 = gtin3Idx > -1 ? String(r[gtin3Idx] || '').trim() : '';
         const skuKey = skuMerchant.toLowerCase();
 
         let status;
@@ -1729,7 +1751,7 @@ function buildMappedProductRows() {
         }
         if (skuMerchant) seenInFile.add(skuKey);
 
-        mapped.push({ brand, skuMerchant, gtin, status });
+        mapped.push({ brand, skuMerchant, gtin, gtin2, gtin3, status });
     });
 
     return mapped;
@@ -1752,7 +1774,7 @@ function renderProductImportPreview() {
         <tr>
             <td>${row.brand || '-'}</td>
             <td><span class="sku-code">${row.skuMerchant || '-'}</span></td>
-            <td>${row.gtin || '-'}</td>
+            <td>${productGtins(row).join('<br>') || '-'}</td>
             <td class="text-center">${statusLabel[row.status]}</td>
         </tr>
     `).join('');
@@ -1788,7 +1810,7 @@ async function importProductsFromExcel() {
 
     const toImport = pendingProductImportMapped
         .filter(r => r.status === 'new')
-        .map(({ brand, skuMerchant, gtin }) => ({ brand, skuMerchant, gtin }));
+        .map(({ brand, skuMerchant, gtin, gtin2, gtin3 }) => ({ brand, skuMerchant, gtin, gtin2, gtin3 }));
 
     if (toImport.length === 0) {
         showAppAlert('ไม่มีรายการที่ถูกต้องให้นำเข้า (ไม่มี SKU Merchant)');

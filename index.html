@@ -184,8 +184,16 @@
                         <input type="text" id="prodBrand" placeholder="แบรนด์/หมวดหมู่" required>
                         <input type="text" id="prodSkuMerchant" placeholder="SKU Merchant" required>
                         <div class="scan-input-wrap">
-                            <input type="text" id="prodGtin" class="scannable-input" placeholder="GTIN / บาร์โค้ด">
+                            <input type="text" id="prodGtin" class="scannable-input" placeholder="GTIN / บาร์โค้ด 1">
                             <button type="button" class="scan-cam-btn" onclick="openQrScanner('prodGtin')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                        </div>
+                        <div class="scan-input-wrap">
+                            <input type="text" id="prodGtin2" class="scannable-input" placeholder="GTIN / บาร์โค้ด 2 (ถ้ามี)">
+                            <button type="button" class="scan-cam-btn" onclick="openQrScanner('prodGtin2')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
+                        </div>
+                        <div class="scan-input-wrap">
+                            <input type="text" id="prodGtin3" class="scannable-input" placeholder="GTIN / บาร์โค้ด 3 (ถ้ามี)">
+                            <button type="button" class="scan-cam-btn" onclick="openQrScanner('prodGtin3')" aria-label="สแกนด้วยกล้อง" title="สแกนด้วยกล้อง">📷</button>
                         </div>
                         <button type="submit" class="btn-primary" id="btnSaveProduct">➕ เพิ่มสินค้า</button>
                         <button type="button" class="btn-revert" id="btnCancelEditProduct" style="display:none;" onclick="cancelEditProduct()">✖️ ยกเลิก</button>
@@ -212,6 +220,14 @@
                             <div class="mapping-field">
                                 <label for="mapProdGtin">คอลัมน์ GTIN / บาร์โค้ด</label>
                                 <select id="mapProdGtin" class="input-box" onchange="renderProductImportPreview()"></select>
+                            </div>
+                            <div class="mapping-field">
+                                <label for="mapProdGtin2">คอลัมน์ GTIN 2 (ถ้ามี)</label>
+                                <select id="mapProdGtin2" class="input-box" onchange="renderProductImportPreview()"></select>
+                            </div>
+                            <div class="mapping-field">
+                                <label for="mapProdGtin3">คอลัมน์ GTIN 3 (ถ้ามี)</label>
+                                <select id="mapProdGtin3" class="input-box" onchange="renderProductImportPreview()"></select>
                             </div>
                         </div>
                         <div class="import-warning">
@@ -518,8 +534,8 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-api.js?v=9"></script>
-<script src="js/script.js?v=42"></script>
+<script src="js/supabase-api.js?v=10"></script>
+<script src="js/script.js?v=43"></script>
 <script src="js/cctv.js?v=23"></script>
 <script src="js/scanlog.js?v=5"></script>
 

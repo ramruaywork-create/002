@@ -70,7 +70,9 @@ async function sbGetAllData() {
             sbFetchAll('substitutes', 'id, tracking_no, old_sku, qty, new_sku, created_at'),
             sbFetchAll('qc_log', 'tracking_no, qc_time'),
             sbFetchAll('order_items', 'id, tracking_no, sku, qty'),
-            sbFetchAll('products', 'id, brand, sku_merchant, gtin')
+            // gtin2/gtin3 เพิ่มทีหลัง: ถ้ายังไม่ได้รัน SQL เพิ่มคอลัมน์ ให้ถอยกลับไปอ่านแบบเดิมเพื่อไม่ให้เว็บพัง
+            sbFetchAll('products', 'id, brand, sku_merchant, gtin, gtin2, gtin3')
+                .catch(() => sbFetchAll('products', 'id, brand, sku_merchant, gtin'))
         ]);
 
         const cutMap = {};
@@ -153,6 +155,8 @@ async function sbGetAllData() {
             brand: p.brand || '',
             skuMerchant: p.sku_merchant || '',
             gtin: p.gtin || '',
+            gtin2: p.gtin2 || '',
+            gtin3: p.gtin3 || '',
             rowIndex: p.id
         }));
 
@@ -470,24 +474,41 @@ function sbFriendlyDupMessage(error, sku, gtin, isUpdate) {
     return `❌ SKU Merchant "${sku}" มีอยู่ในระบบแล้ว${suffix}`;
 }
 
+// รวม GTIN ทั้ง 3 ช่อง: ตัดช่องว่าง ตัดค่าซ้ำ และเลื่อนช่องที่ว่างขึ้นมา (ช่อง 1 ว่างแต่ช่อง 2 มีค่า → ย้ายขึ้นเป็นช่อง 1)
+function sbCleanGtins(src) {
+    const list = [];
+    [src && src.gtin, src && src.gtin2, src && src.gtin3].forEach(v => {
+        const s = String(v || '').trim();
+        if (s && !list.includes(s)) list.push(s);
+    });
+    return { gtin: list[0] || null, gtin2: list[1] || null, gtin3: list[2] || null };
+}
+
+// ถ้ายังไม่ได้เพิ่มคอลัมน์ gtin2/gtin3 ในฐานข้อมูล ให้บอกวิธีแก้แทนข้อความ error ดิบ
+function sbMissingGtinColumnMessage(err) {
+    const msg = String((err && err.message) || '');
+    if (/gtin2|gtin3/.test(msg)) return '❌ ฐานข้อมูลยังไม่มีคอลัมน์ gtin2 / gtin3 — ให้รัน SQL เพิ่มคอลัมน์ใน Supabase (SQL Editor) ก่อน';
+    return null;
+}
+
 async function sbAddProduct(form) {
     try {
         const sku = String((form && form.skuMerchant) || '').trim();
         if (!sku) return { success: false, message: 'กรุณากรอก SKU Merchant' };
-        const gtin = String((form && form.gtin) || '').trim();
+        const g = sbCleanGtins(form);
 
         const { error } = await sbClient.from('products').insert({
             brand: form.brand || '',
             sku_merchant: sku,
-            gtin: gtin || null
+            ...g
         });
         if (error) {
-            if (error.code === '23505') return { success: false, message: sbFriendlyDupMessage(error, sku, gtin, false) };
+            if (error.code === '23505') return { success: false, message: sbFriendlyDupMessage(error, sku, g.gtin, false) };
             throw error;
         }
         return { success: true, message: 'บันทึกสินค้าเรียบร้อยแล้ว' };
     } catch (err) {
-        return { success: false, message: err.message || String(err) };
+        return { success: false, message: sbMissingGtinColumnMessage(err) || err.message || String(err) };
     }
 }
 
@@ -497,20 +518,20 @@ async function sbUpdateProduct(data) {
         if (!rowIndex || rowIndex < 1) return { success: false, message: 'แถวไม่ถูกต้อง' };
         const sku = String(data.skuMerchant || '').trim();
         if (!sku) return { success: false, message: 'กรุณากรอก SKU Merchant' };
-        const gtin = String(data.gtin || '').trim();
+        const g = sbCleanGtins(data);
 
         const { error } = await sbClient.from('products').update({
             brand: data.brand || '',
             sku_merchant: sku,
-            gtin: gtin || null
+            ...g
         }).eq('id', rowIndex);
         if (error) {
-            if (error.code === '23505') return { success: false, message: sbFriendlyDupMessage(error, sku, gtin, true) };
+            if (error.code === '23505') return { success: false, message: sbFriendlyDupMessage(error, sku, g.gtin, true) };
             throw error;
         }
         return { success: true, message: 'แก้ไขสินค้าเรียบร้อยแล้ว' };
     } catch (err) {
-        return { success: false, message: err.message || String(err) };
+        return { success: false, message: sbMissingGtinColumnMessage(err) || err.message || String(err) };
     }
 }
 
@@ -554,8 +575,7 @@ async function sbImportProducts(payload) {
             const key = sku.toLowerCase();
             if (seenInBatch[key]) { skipped++; return; }
             seenInBatch[key] = true;
-            const gtin = String(p.gtin || '').trim();
-            toInsert.push({ brand: String(p.brand || '').trim(), sku_merchant: sku, gtin: gtin || null });
+            toInsert.push({ brand: String(p.brand || '').trim(), sku_merchant: sku, ...sbCleanGtins(p) });
         });
 
         let added = 0;
